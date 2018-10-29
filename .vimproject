@@ -1,4 +1,5 @@
-ruby=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.txt *.conf" {
+HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.txt *.conf" {
+ workflow.rb
  bin=bin filter="*"{
  }
  lib=lib {
