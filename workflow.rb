@@ -9,6 +9,14 @@ Workflow.require_workflow "HTS"
 module HTSBenchmark
   extend Workflow
 
+  def self.af_not_in_resource
+    0.0000025
+  end
+
+  def self.germline_resource
+    GATK.known_sites.b37["af-only-gnomad.vcf.gz"].produce.find
+	end
+
   CALLERS = %w(mutect2_clean strelka varscan_somatic varscan_somatic_alt)
 
   dep HTS, :BAM_rescore, :fastq1 => :placeholder, :fastq2 => :placeholder do |jobname,options|
@@ -33,15 +41,14 @@ module HTSBenchmark
         {:inputs => options, :jobname => type}
       end
     end
-    dep HTS, var_caller, :tumor => :BAM, :normal => :BAM do |jobname, options, deps|
-      normal = deps.flatten.select{|d| d.task_name.to_s == 'BAM' && d.clean_name.include?('normal')}.first
-      tumor = deps.flatten.select{|d| d.task_name.to_s == 'BAM' && d.clean_name.include?('tumor')}.first
-
-      {:inputs => options.merge({:normal => normal, :tumor => tumor}), :jobname => jobname}
-    end
     extension :vcf
-    task var_caller => :text do
-      TSV.get_stream step(var_caller)
+    dep_task var_caller, HTS, var_caller, :tumor => :BAM, :normal => :BAM,
+      :germline_resource => HTSBenchmark.germline_resource,
+      :af_not_in_resource => HTSBenchmark.af_not_in_resource do |jobname,options,deps|
+        normal = deps.flatten.select{|d| d.task_name.to_s == 'BAM' && d.clean_name.include?('normal')}.first
+        tumor = deps.flatten.select{|d| d.task_name.to_s == 'BAM' && d.clean_name.include?('tumor')}.first
+
+        {:inputs => options.merge({:normal => normal, :tumor => tumor}), :jobname => jobname}
     end
   end
 
