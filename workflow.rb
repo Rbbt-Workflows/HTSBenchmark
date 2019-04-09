@@ -9,15 +9,7 @@ Workflow.require_workflow "HTS"
 module HTSBenchmark
   extend Workflow
 
-  def self.af_not_in_resource
-    0.0000025
-  end
-
-  def self.germline_resource
-    GATK.known_sites.b37["af-only-gnomad.vcf.gz"].produce.find
-	end
-
-  CALLERS = %w(mutect2_clean strelka varscan_somatic varscan_somatic_alt)
+  CALLERS = %w(mutect2_orientation_bias strelka varscan_somatic varscan_somatic_alt muse somatic_sniper)
 
   dep HTS, :BAM_rescore, :fastq1 => :placeholder, :fastq2 => :placeholder do |jobname,options|
     inputs = case jobname
@@ -36,15 +28,13 @@ module HTSBenchmark
   end
 
   CALLERS.each do |var_caller|
-    dep :BAM, :compute => :bootstrap do |jobname, options|
+    dep :BAM, :compute => :produce do |jobname, options|
       %w(tumor normal).collect do |type|
         {:inputs => options, :jobname => type}
       end
     end
     extension :vcf
-    dep_task var_caller, HTS, var_caller, :tumor => :BAM, :normal => :BAM,
-      :germline_resource => HTSBenchmark.germline_resource,
-      :af_not_in_resource => HTSBenchmark.af_not_in_resource do |jobname,options,deps|
+    dep_task var_caller, HTS, var_caller, :tumor => :BAM, :normal => :BAM do |jobname,options,deps|
         normal = deps.flatten.select{|d| d.task_name.to_s == 'BAM' && d.clean_name.include?('normal')}.first
         tumor = deps.flatten.select{|d| d.task_name.to_s == 'BAM' && d.clean_name.include?('tumor')}.first
 
@@ -75,15 +65,20 @@ module HTSBenchmark
     var_callers.each do |c1|
       m1 = caller_variants[c1]
       matches = var_callers.collect do |c2|
+        next if c1 == c2
         m2 = caller_variants[c2]
         m1 & m2
       end
       unique = m1 - matches.flatten
-      tsv[c1] = [unique.length] + matches.collect{|m| m.length}
+      tsv[c1] = [unique.length] + matches.collect{|m| m.nil? ? m1.length : m.length}
     end
 
     tsv
   end
+
+  dep :BAM, :jobname => 'normal'
+  extension :vcf
+  dep_task :haplotype, HTS, :haplotype, :BAM => :BAM
 end
 
 #require 'HTSBenchmark/tasks/basic.rb'
