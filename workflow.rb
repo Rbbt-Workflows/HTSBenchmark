@@ -9,9 +9,9 @@ Workflow.require_workflow "HTS"
 module HTSBenchmark
   extend Workflow
 
-  CALLERS = %w(mutect2_orientation_bias strelka varscan_somatic varscan_somatic_alt muse somatic_sniper)
+  CALLERS = %w(mutect2 strelka varscan_somatic muse somatic_sniper)
 
-  dep HTS, :BAM_rescore, :fastq1 => :placeholder, :fastq2 => :placeholder do |jobname,options|
+  dep HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder do |jobname,options|
     inputs = case jobname
              when 'tumor'
                {:fastq1 => Rbbt.data.gatk["tumor.1.fastq"].find, :fastq2 => Rbbt.data.gatk["tumor.2.fastq"].find}
