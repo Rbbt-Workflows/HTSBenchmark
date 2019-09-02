@@ -176,43 +176,43 @@ module HTSBenchmark
   end
 
   CALLERS.each do |snv_caller|
-    dep Sample, snv_caller
-    dep Sequence, :expanded_vcf, :vcf_file => snv_caller.to_sym
-
     bed_task = (snv_caller + '_bed').to_sym
     synthetic_bam_task = ("synthetic_" + snv_caller).to_sym
+    synthetic_bam_realign_task = ("synthetic_" + snv_caller + "_realign").to_sym
 
+    dep Sample, snv_caller
+    dep Sequence, :expanded_vcf, :vcf_file => snv_caller.to_sym
     task bed_task => :text do
       TSV.traverse step(:expanded_vcf), :into => :stream do |mutation,values,fields|
-        mutation = mutation.first if Array === mutation
         values = NamedArray.setup(values, fields)
+        mutation = values["Original"].first
         af = values[clean_name + ':AF']
-        chr, pos, mut_allele = mutation.split(":")
-        next if mut_allele.length > 1
+        chr, pos, ref, mut_allele = mutation.split(":")
+        next unless ref.length == 1
+        next unless %w(C T A G).include? mut_allele
         [chr, pos, pos, af, mut_allele] * "\t"
       end
     end
 
+    dep Sample, :BAM_normal
     dep bed_task
     extension :bam
-    dep_task synthetic_bam_task, HTS, :BAMSurgeon_add_snvs, :bamfile => :BAM_normal, :varfile => bed_task, :picardjar => Rbbt.software.opt.PicardTools.produce.glob("PicardTools.jar").first
+    dep_task synthetic_bam_task, HTS, :BAMSurgeon_add_snvs, :bamfile => :BAM_normal, :varfile => bed_task, :picardjar => Rbbt.software.opt.PicardTools.produce.glob("PicardTools.jar").first do |jobname,options,deps|
+      reference = deps.flatten.first.recursive_inputs[:reference]
+      {:inputs => options.merge(:reference => reference), :jobname => jobname}
+    end
+
+    dep synthetic_bam_task
+    dep_task synthetic_bam_realign_task, HTS, :BAM_rescore_realign, :bam_file => synthetic_bam_task
 
     CALLERS.each do |snv_caller2|
       synthetic_bam_caller_task = ("synthetic_" + snv_caller + "_" + snv_caller2).to_sym
 
-      dep synthetic_bam_task
-      dep_task synthetic_bam_caller_task, Sample, snv_caller2 do |jobname, options, deps|
-        synthetic = deps.flatten.select{|d| d.task_name == synthetic_bam_task}.first
-        {:inputs => options.merge({"Sample#BAM" => synthetic}), :jobname => jobname}
+      dep synthetic_bam_realign_task
+      dep_task synthetic_bam_caller_task, HTS, snv_caller2.to_sym, :tumor => synthetic_bam_realign_task do |jobname, options, deps|
+        normal = deps.flatten.select{|d| d.task_name == :BAM_normal }.first
+        {:inputs => options.merge({ :normal => normal}), :jobname => jobname}
       end
-
-
-      dep_task synthetic_bam_caller_task, Sample, snv_caller2 do |jobname, options, deps|
-        synthetic = deps.flatten.select{|d| d.task_name == synthetic_bam_task}.first
-        {:inputs => options.merge({"Sample#BAM" => synthetic}), :jobname => jobname}
-      end
-
-
     end
   end
 
