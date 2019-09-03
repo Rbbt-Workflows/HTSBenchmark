@@ -198,8 +198,8 @@ module HTSBenchmark
     dep bed_task
     extension :bam
     dep_task synthetic_bam_task, HTS, :BAMSurgeon_add_snvs, :bamfile => :BAM_normal, :varfile => bed_task, :picardjar => Rbbt.software.opt.PicardTools.produce.glob("PicardTools.jar").first do |jobname,options,deps|
-      reference = deps.flatten.first.recursive_inputs[:reference]
-      {:inputs => options.merge(:reference => reference), :jobname => jobname}
+      options = Sample.add_sample_options jobname, options
+      {:inputs => options, :jobname => jobname}
     end
 
     dep synthetic_bam_task
@@ -211,7 +211,8 @@ module HTSBenchmark
       dep synthetic_bam_realign_task
       dep_task synthetic_bam_caller_task, HTS, snv_caller2.to_sym, :tumor => synthetic_bam_realign_task do |jobname, options, deps|
         normal = deps.flatten.select{|d| d.task_name == :BAM_normal }.first
-        {:inputs => options.merge({ :normal => normal}), :jobname => jobname}
+        options = Sample.add_sample_options jobname, options
+        {:inputs => options.merge(:normal => normal), :jobname => jobname}
       end
     end
   end
