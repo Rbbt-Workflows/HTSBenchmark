@@ -175,10 +175,14 @@ module HTSBenchmark
     nil
   end
 
-  CALLERS.each do |snv_caller|
+  A = 0; C = 1; G = 2; T = 3
+  CALLERS2 = %w(mutect2 strelka varscan_somatic somatic_sniper)
+  CALLERS2.each do |snv_caller|
     bed_task = (snv_caller + '_bed').to_sym
     synthetic_bam_task = ("synthetic_" + snv_caller).to_sym
     synthetic_bam_realign_task = ("synthetic_" + snv_caller + "_realign").to_sym
+    synthetic_bam_editBAMSM_task = ("synthetic_" + snv_caller + "_editBAMSM").to_sym
+    synthetic_bam_sortBAM_task = ("synthetic_" + snv_caller + "_sortBAM").to_sym
 
     dep Sample, snv_caller
     dep Sequence, :expanded_vcf, :vcf_file => snv_caller.to_sym
@@ -186,7 +190,27 @@ module HTSBenchmark
       TSV.traverse step(:expanded_vcf), :into => :stream do |mutation,values,fields|
         values = NamedArray.setup(values, fields)
         mutation = values["Original"].first
-        af = values[clean_name + ':AF']
+        af = nil
+        case snv_caller
+        when "somatic_sniper"
+          alt = values["Original"].first[-1]
+          bcount_field = fields.select{|f| f.include? 'BCOUNT'}.last 
+          bcount = values[bcount_field].first
+          total_bcount = bcount.split(',').map(&:to_i).inject(0,:+)
+          alt_bcount = bcount.split(',')[Object.module_eval(alt)]
+          af = (alt_bcount.to_f/total_bcount.to_f).to_s
+        when "mutect2"
+          af_field = fields.select{|f| f.include? 'AF'}.first
+          af = values[af_field]
+        when "varscan_somatic"
+          af = values["TUMOR:FREQ"].first[0..-2].to_f
+        when "strelka"
+          next unless values["Filter"].first == "PASS" 
+          alt = values["Original"].first[-1]
+		  total_dp = values["TUMOR:DP"].first.to_f - values["TUMOR:FDP"].first.to_f
+		  alt_count = values["TUMOR:" + alt + "U"].first.split(',').first.to_f                 
+		  af = (alt_count/total_dp).to_s 
+        end
         chr, pos, ref, mut_allele = mutation.split(":")
         next unless ref.length == 1
         next unless %w(C T A G).include? mut_allele
@@ -201,13 +225,21 @@ module HTSBenchmark
       options = Sample.add_sample_options jobname, options
       {:inputs => options, :jobname => jobname}
     end
+    
+    dep synthetic_bam_task 
+    dep_task synthetic_bam_sortBAM_task, HTS, :sort_BAM, :BAM => synthetic_bam_task
+    
+    dep synthetic_bam_sortBAM_task
+    dep_task synthetic_bam_editBAMSM_task, HTSBenchmark, :editBAMSM, :bamfile => synthetic_bam_sortBAM_task, :newSM => "synthetic_tumor_" + snv_caller.to_s
+  
 
-    dep synthetic_bam_task
-    dep_task synthetic_bam_realign_task, HTS, :BAM_rescore_realign, :bam_file => synthetic_bam_task
-
+    dep synthetic_bam_editBAMSM_task
+    dep_task synthetic_bam_realign_task, HTS, :BAM_rescore_realign, :bam_file => synthetic_bam_editBAMSM_task
+     
     CALLERS.each do |snv_caller2|
       synthetic_bam_caller_task = ("synthetic_" + snv_caller + "_" + snv_caller2).to_sym
-
+      
+      dep Sample, :BAM_normal 
       dep synthetic_bam_realign_task
       dep_task synthetic_bam_caller_task, HTS, snv_caller2.to_sym, :tumor => synthetic_bam_realign_task do |jobname, options, deps|
         normal = deps.flatten.select{|d| d.task_name == :BAM_normal }.first
