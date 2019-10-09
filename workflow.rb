@@ -3,8 +3,6 @@ require 'rbbt/workflow'
 
 Misc.add_libdir if __FILE__ == $0
 
-#require 'rbbt/sources/HTSBenchmark'
-
 Workflow.require_workflow "Sample"
 Workflow.require_workflow "HTS"
 module HTSBenchmark
@@ -63,17 +61,12 @@ module HTSBenchmark
   extension :vcf
   dep_task :haplotype, HTS, :haplotype, :BAM => :BAM
 
-  #dep HTS, :revert_BAM do |jobname,options|
-  #  inputs = {:bam_file => Dir.glob(Rbbt.share.data.studies.BAMSURGEON_TEST_MUTECT["WES.orig"].bamsurgeon_test_mutect_normal["*.bam"].find)}
-  #  {:inputs => options.merge(inputs), :jobname => 'HTSBenchmark.' + jobname}
-  #end
   dep HTS, :BAM_rescore_realign, :compute => :produce do |jobname, options|
     inputs = {:bam_file => Dir.glob(Rbbt.share.data.studies.BAMSURGEON_TEST_MUTECT["WES.orig"].bamsurgeon_test_mutect_normal["*.bam"].find)}
     {:inputs => options.merge(inputs), :jobname => 'HTSBenchmark.' + jobname}
   end
   extension :bam
   dep_task :test_muts, HTS, :BAMSurgeon_add_snvs do |jobname, options, deps|
-    #bamfile = Samtools.prepare_BAM(deps.flatten.select{|d| d.task_name.to_s == 'BAM_rescore_realign' }.first.produce.path)
     bamfile = deps.flatten.select{|d| d.task_name.to_s == 'BAM_rescore_realign' }.first.path
     inputs = {:varfile => Rbbt.data.bam_surgeon["test_snvs.txt"].find,
               :bamfile => bamfile,
@@ -121,62 +114,8 @@ module HTSBenchmark
     nil
   end
 
-
-  dep :prepared_bams
-  dep HTS, :mutect2, :tumor => :placeholder, :normal => :placeholder do |jobname,options,deps|
-    tumor = deps.flatten.last.info[:dependencies].select{|d| d.include?:editBAMSM}.first.last
-    normal =deps.flatten.last.info[:dependencies].select{|d| d.include?:sortBAM}.select{|d| d.last.include?("sort_normal")}.first.last
-    {:inputs => options.merge({:normal => normal, :tumor => tumor}), :jobname => jobname}
-  end
-  extension :vcf
-  task :mutect_benchmark => :binary do |jobname,options,deps|
-    Open.rm self.path
-    Open.ln_s step(:mutect2).path, self.path
-    nil
-  end
-
-
-  dep :prepared_bams
-  dep HTS, :varscan_somatic, :tumor => :placeholder, :normal => :placeholder do |jobname,options,deps|
-    tumor = deps.flatten.last.info[:dependencies].select{|d| d.include?:editBAMSM}.first.last
-    normal =deps.flatten.last.info[:dependencies].select{|d| d.include?:sortBAM}.select{|d| d.last.include?("sort_normal")}.first.last
-    {:inputs => options.merge({:normal => normal, :tumor => tumor}), :jobname => jobname}
-  end
-  extension :vcf
-  task :varscan_somatic_benchmark => :binary do |jobname,options,deps|
-    Open.rm self.path
-    Open.ln_s step(:varscan_somatic).path, self.path
-    nil
-  end
-
-  dep :prepared_bams
-  dep HTS, :somatic_sniper, :tumor => :placeholder, :normal => :placeholder do |jobname,options,deps|
-    tumor = deps.first.info[:dependencies].select {|a| a.include? :editBAMSM}.first[1]
-    normal = deps.first.info[:dependencies].last[1]
-    {:inputs => options.merge({:normal => normal, :tumor => tumor}), :jobname => jobname}
-  end
-  extension :vcf
-  task :somatic_sniper_benchmark => :binary do |jobname,options,deps|
-    Open.rm self.path
-    Open.ln_s step(:somatic_sniper).path, self.path
-    nil
-  end
-
-  dep :prepared_bams
-  dep HTS, :muse, :tumor => :placeholder, :normal => :placeholder do |jobname,options,deps|
-    tumor = deps.flatten.last.info[:dependencies].select{|d| d.include?:editBAMSM}.first.last
-    normal =deps.flatten.last.info[:dependencies].select{|d| d.include?:sortBAM}.select{|d| d.last.include?("sort_normal")}.first.last
-    {:inputs => options.merge({:normal => normal, :tumor => tumor}), :jobname => jobname}
-  end
-  extension :vcf
-  task :muse_benchmark => :binary do |jobname,options,deps|
-    Open.rm self.path
-    Open.ln_s step(:muse).path, self.path
-    nil
-  end
-
   A = 0; C = 1; G = 2; T = 3
-  CALLERS2 = %w(mutect2 strelka varscan_somatic somatic_sniper)
+  CALLERS2 = %w(mutect2 strelka varscan_somatic muse somatic_sniper)
   CALLERS2.each do |snv_caller|
     bed_task = (snv_caller + '_bed').to_sym
     synthetic_bam_task = ("synthetic_" + snv_caller).to_sym
@@ -184,7 +123,7 @@ module HTSBenchmark
     synthetic_bam_editBAMSM_task = ("synthetic_" + snv_caller + "_editBAMSM").to_sym
     synthetic_bam_sortBAM_task = ("synthetic_" + snv_caller + "_sortBAM").to_sym
 
-    dep Sample, snv_caller
+    dep Sample, snv_caller, :somatic_score => 40
     dep Sequence, :expanded_vcf, :vcf_file => snv_caller.to_sym
     task bed_task => :text do
       TSV.traverse step(:expanded_vcf), :into => :stream do |mutation,values,fields|
@@ -192,6 +131,10 @@ module HTSBenchmark
         mutation = values["Original"].first
         af = nil
         case snv_caller
+        when "muse"
+          alt = values["TUMOR:AD"].first.split(",").last.to_f
+          dp = values["TUMOR:DP"].first.to_f
+          af = (alt/dp).to_s
         when "somatic_sniper"
           alt = values["Original"].first[-1]
           bcount_field = fields.select{|f| f.include? 'BCOUNT'}.last 
@@ -203,7 +146,7 @@ module HTSBenchmark
           af_field = fields.select{|f| f.include? 'AF'}.first
           af = values[af_field]
         when "varscan_somatic"
-          af = values["TUMOR:FREQ"].first[0..-2].to_f
+          af = values["TUMOR:FREQ"].first[0..-2].to_f / 100.0
         when "strelka"
           next unless values["Filter"].first == "PASS" 
           alt = values["Original"].first[-1]
@@ -253,8 +196,3 @@ module HTSBenchmark
 
 
 end
-#require 'HTSBenchmark/tasks/basic.rb'
-
-#require 'rbbt/knowledge_base/HTSBenchmark'
-#require 'rbbt/entity/HTSBenchmark'
-
