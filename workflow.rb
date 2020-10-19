@@ -4,8 +4,9 @@ require 'rbbt/workflow'
 Misc.add_libdir if __FILE__ == $0
 
 #require 'rbbt/sources/HTSBenchmark'
-
+Workflow.require_workflow "Sample"
 Workflow.require_workflow "HTS"
+
 module HTSBenchmark
   extend Workflow
 
@@ -85,4 +86,4 @@ end
 
 #require 'rbbt/knowledge_base/HTSBenchmark'
 #require 'rbbt/entity/HTSBenchmark'
-
+require 'germline'
