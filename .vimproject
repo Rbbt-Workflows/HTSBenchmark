@@ -3,6 +3,15 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
  bin=bin filter="*"{
  }
  lib=lib {
+  miniref.rb
+  NEAT_genreads.rb
+  tasks=tasks{
+   miniref.rb
+   simulate.rb
+   benchmark.rb
+   bundle.rb
+   evaluate.rb
+  }
  }
  test=test {
   test_helper.rb
