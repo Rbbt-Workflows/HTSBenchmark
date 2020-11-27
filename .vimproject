@@ -1,16 +1,25 @@
 HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.txt *.conf" {
  workflow.rb
+ workflow.md
  bin=bin filter="*"{
  }
  lib=lib {
-  miniref.rb
   NEAT_genreads.rb
+  germline.rb
+  miniref.rb
   tasks=tasks{
+   simulate=simulate{
+    NEAT.rb
+    genotypes.rb
+   }
    miniref.rb
-   simulate.rb
-   benchmark.rb
    bundle.rb
-   evaluate.rb
+   benchmark.rb
+   evaluate=evaluate{
+    vcfeval.rb
+    IGV.rb
+    util.rb
+   }
   }
  }
  test=test {

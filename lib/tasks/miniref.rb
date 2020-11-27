@@ -25,7 +25,8 @@ module HTSBenchmark
   input :organism, :string, "Organism code, no build", "Hsa"
   input :reference, :string, "Reference code", "hg38", :jobname => true
   input :padding, :integer, "Extra bases to add to reference", 1_000
-  dep :miniref_sizes, :compute => :produce
+  dep :miniref_sizes
+  extension 'fa.gz'
   task :miniref => :text do |organism,reference,padding|
     require 'miniref'
 

@@ -5,6 +5,7 @@ Misc.add_libdir if __FILE__ == $0
 
 Workflow.require_workflow "Sample"
 Workflow.require_workflow "HTS"
+
 module HTSBenchmark
   extend Workflow
 
@@ -219,11 +220,14 @@ module HTSBenchmark
 
 
 end
+require 'tasks/simulate/genotypes'
+require 'tasks/simulate/NEAT'
 require 'tasks/miniref.rb'
-require 'tasks/simulate.rb'
 require 'tasks/benchmark.rb'
-require 'tasks/evaluate.rb'
 require 'tasks/bundle.rb'
+require 'tasks/evaluate/vcfeval'
+require 'tasks/evaluate/IGV'
 
 #require 'rbbt/knowledge_base/HTSBenchmark'
 #require 'rbbt/entity/HTSBenchmark'
+#require 'germline'
