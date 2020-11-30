@@ -32,8 +32,10 @@ module HTSBenchmark
 
   dep :simulate_germline_hg38_lf
   task :simulate_germline_hg38_lf_chr => :array do 
+    chr = recursive_inputs[:chromosome]
     TSV.traverse step(:simulate_germline_hg38_lf), :type => :array, :into => :stream do |line|
       next if ! line.include?(":") || line.split(":").first.include?("_")
+      next if chr && line.split(":").first != chr
       line
     end
   end
@@ -74,8 +76,10 @@ module HTSBenchmark
 
   dep :simulate_somatic_hg38_lf
   task :simulate_somatic_hg38_lf_chr => :array do 
+    chr = recursive_inputs[:chromosome]
     TSV.traverse step(:simulate_somatic_hg38_lf), :type => :array, :into => :stream do |line|
       next if ! line.include?(":") || line.split(":").first.include?("_")
+      next if chr && line.split(":").first != chr
       line
     end
   end

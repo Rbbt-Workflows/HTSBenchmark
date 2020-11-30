@@ -91,6 +91,7 @@ module HTSBenchmark
     fp_info = {}
     fp_files.each do |file|
       name = file.sub('.png', '')
+      iii name if name == "1:988599:G"
       callers = mutation_callers[name].nil? ? [] : mutation_callers[name].split(";").collect{|e| e.split("--").first}
       fp_info[name] = callers
     end

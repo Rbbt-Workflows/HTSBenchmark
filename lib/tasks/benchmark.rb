@@ -57,8 +57,8 @@ module HTSBenchmark
     Misc.in_dir benchmark.file('stage') do
       dir = benchmark.file('stage').share.data.studies["ARGO-Benchmark"].WES
 
-      bam = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 BAM -pf -prov").read.strip
-      bam_normal = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 BAM_normal -pf -prov").read.strip
+      bam = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 BAM -pf -prov --workdir_all #{stage.workdir}").read.strip
+      bam_normal = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 BAM_normal -pf -prov --workdir_all #{stage.workdir}").read.strip
 
       if Persist.newer?(bam, dir, true)
         Log.warn "Recursive clean of variant calling"
@@ -68,9 +68,9 @@ module HTSBenchmark
       end
 
 
-      CMD.cmd_log("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --min_callers #{min_callers} -ck HTS_high #{clean_str} --update -pf")
+      CMD.cmd_log("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --min_callers #{min_callers} -ck HTS_high #{clean_str} --update -pf --workdir_all #{stage.workdir}")
 
-      vcf = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --min_callers #{min_callers} -pf", :log => true).read.strip
+      vcf = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --min_callers #{min_callers} -pf --workdir_all #{stage.workdir}", :log => true).read.strip
 
       Open.rm file('BAM.bam')
       Open.rm file('BAM_normal.bam')
@@ -94,7 +94,7 @@ module HTSBenchmark
     Misc.in_dir benchmark.file('stage') do
       dir = benchmark.file('stage').share.data.studies["ARGO-Benchmark"].WES
 
-      bam_normal = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 BAM_normal -pf -prov").read.strip
+      bam_normal = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 BAM_normal -pf -prov --workdir_all #{stage.workdir}").read.strip
 
       if Persist.newer?(bam, dir, true)
         Log.warn "Recursive clean of variant calling"
@@ -103,7 +103,7 @@ module HTSBenchmark
         clean_str = "-cl"
       end
 
-      vcf = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 haplotype -ck HTS_high #{clean_str} --update -pf", :log => true).read.strip
+      vcf = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 haplotype -ck HTS_high #{clean_str} --update -pf --workdir_all #{stage.workdir}", :log => true).read.strip
 
       Open.rm file('BAM_normal.bam')
 

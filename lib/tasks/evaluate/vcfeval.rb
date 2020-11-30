@@ -18,14 +18,16 @@ module HTSBenchmark
   end
 
   dep :vcfeval
-  task :fp_positions => :array do
-    fp = step(:vcfeval).file('output/fp.vcf.gz')
-    Sequence.job(:genomic_mutations, nil, :vcf_file => fp).run
+  dep_task :fp_positions, Sequence, :genomic_mutations, :vcf_file => :placeholder do |jobname,options,dependencies|
+    vcfeval = dependencies.flatten.first
+    options = options.merge(:vcf_file => vcfeval.file('output/fp.vcf.gz'))
+    {:inputs => options, :jobname => jobname}
   end
 
   dep :vcfeval
-  task :fn_positions => :array do
-    fn = step(:vcfeval).file('output/fn.vcf.gz')
-    Sequence.job(:genomic_mutations, nil, :vcf_file => fn).run
+  dep_task :fn_positions, Sequence, :genomic_mutations, :vcf_file => :placeholder do |jobname,options,dependencies|
+    vcfeval = dependencies.flatten.first
+    options = options.merge(:vcf_file => vcfeval.file('output/fn.vcf.gz'))
+    {:inputs => options, :jobname => jobname}
   end
 end

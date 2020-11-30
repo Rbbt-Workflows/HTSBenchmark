@@ -1,36 +1,16 @@
 module HTSBenchmark
 
-  dep :simulate_germline_hg38_vcf
-  dep :simulate_somatic_hg38_vcf
-  dep :miniref, :vcf => :simulate_somatic_hg38_vcf, :jobname => 'hg38'
-  dep :minify_vcf, :vcf_file => :simulate_germline_hg38_vcf, :sizes => :miniref_sizes, :jobname => "germline"
-  dep :minify_vcf, :vcf_file => :simulate_somatic_hg38_vcf, :sizes => :miniref_sizes, :jobname => "somatic"
-  dep :NEAT_genreads, :somatic => :placeholder, :germline => :placeholder, :reference => :miniref do |jobname,options,dependencies|
-    germline, somatic = dependencies.flatten.select{|dep| dep.task_name.to_s == 'minify_vcf'}
-    options[:germline] = germline
-    options[:somatic] = somatic
-    {:inputs => options, :jobname => jobname}
-  end
+  dep :simulated_sample
   dep_task :aligned_BAM, HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder, :reference => 'hg38', :sequencing_center => "Simulation", :platform => "NEAT_GenReads" do |jobname,options,dependencies|
-    neat = dependencies.flatten.select{|dep| dep.task_name.to_s == "NEAT_genreads"}.first
+    neat = dependencies.flatten.select{|dep| dep.task_name.to_s == "simulated_sample"}.first
     options[:fastq1] = neat.file('output/tumor_read1.fq.gz')
     options[:fastq2] = neat.file('output/tumor_read2.fq.gz')
     {:inputs => options, :jobname => jobname}
   end
 
-  dep :simulate_germline_hg38_vcf
-  dep :simulate_somatic_hg38_vcf
-  dep :miniref, :vcf => :simulate_somatic_hg38_vcf, :jobname => 'hg38'
-  dep :minify_vcf, :vcf_file => :simulate_germline_hg38_vcf, :sizes => :miniref_sizes, :jobname => "germline"
-  dep :minify_vcf, :vcf_file => :simulate_somatic_hg38_vcf, :sizes => :miniref_sizes, :jobname => "somatic"
-  dep :NEAT_genreads, :somatic => :placeholder, :germline => :placeholder, :reference => :miniref do |jobname,options,dependencies|
-    germline, somatic = dependencies.flatten.select{|dep| dep.task_name.to_s == 'minify_vcf'}
-    options[:germline] = germline
-    options[:somatic] = somatic
-    {:inputs => options, :jobname => jobname}
-  end
+  dep :simulated_sample
   dep_task :aligned_BAM_normal, HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder, :reference => 'hg38', :sequencing_center => "Simulation", :platform => "NEAT_GenReads" do |jobname,options,dependencies|
-    neat = dependencies.flatten.select{|dep| dep.task_name.to_s == "NEAT_genreads"}.first
+    neat = dependencies.flatten.select{|dep| dep.task_name.to_s == "simulated_sample"}.first
     options[:fastq1] = neat.file('output/normal_read1.fq.gz')
     options[:fastq2] = neat.file('output/normal_read2.fq.gz')
     {:inputs => options, :jobname => jobname}

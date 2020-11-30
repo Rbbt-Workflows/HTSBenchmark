@@ -65,4 +65,16 @@ module HTSBenchmark
     
     "DONE"
   end
+
+  dep :simulate_germline_hg38_vcf
+  dep :simulate_somatic_hg38_vcf
+  dep :miniref, :vcf => :simulate_somatic_hg38_vcf, :jobname => 'hg38'
+  dep :minify_vcf, :vcf_file => :simulate_germline_hg38_vcf, :sizes => :miniref_sizes, :jobname => "germline"
+  dep :minify_vcf, :vcf_file => :simulate_somatic_hg38_vcf, :sizes => :miniref_sizes, :jobname => "somatic"
+  dep_task :simulated_sample, HTSBenchmark, :NEAT_genreads, :somatic => :placeholder, :germline => :placeholder, :reference => :miniref do |jobname,options,dependencies|
+    germline, somatic = dependencies.flatten.select{|dep| dep.task_name.to_s == 'minify_vcf'}
+    options[:germline] = germline
+    options[:somatic] = somatic
+    {:inputs => options, :jobname => jobname}
+  end
 end
