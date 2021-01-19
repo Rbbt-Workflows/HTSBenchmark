@@ -67,10 +67,11 @@ module HTSBenchmark
         clean_str = "-cl"
       end
 
+      mnp = 1
 
-      CMD.cmd_log("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --min_callers #{min_callers} -ck HTS_high #{clean_str} --update -pf --workdir_all #{stage.workdir}")
+      CMD.cmd_log("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --max_mnp_distance=#{mnp} --min_callers #{min_callers} -ck HTS_high #{clean_str} --update -pf --workdir_all #{stage.workdir}")
 
-      vcf = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --min_callers #{min_callers} -pf --workdir_all #{stage.workdir}", :log => true).read.strip
+      vcf = CMD.cmd("env PWD=#{benchmark.file('stage')} rbbt task Sample -W HTS -jn #{sample} --log 0 #{variant_caller} --max_mnp_distance=#{mnp} --min_callers #{min_callers} -pf --workdir_all #{stage.workdir}", :log => true).read.strip
 
       Open.rm file('BAM.bam')
       Open.rm file('BAM_normal.bam')

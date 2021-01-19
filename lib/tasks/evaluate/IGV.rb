@@ -91,7 +91,6 @@ module HTSBenchmark
     fp_info = {}
     fp_files.each do |file|
       name = file.sub('.png', '')
-      iii name if name == "1:988599:G"
       callers = mutation_callers[name].nil? ? [] : mutation_callers[name].split(";").collect{|e| e.split("--").first}
       fp_info[name] = callers
     end
@@ -189,5 +188,58 @@ module HTSBenchmark
         end
       end
     end
+  end
+
+  dep :vcfeval do |jobname,options,dependencies|
+    %w(golden miniref fullref).collect do |type|
+      {:inputs => options.merge(:type => type), :jobname => jobname}
+    end
+  end
+  task :compare_types => :tsv do
+
+    tsv = dependencies.first.load
+    name = dependencies.first.recursive_inputs[:type]
+    key = "None"
+    v = tsv[key]
+    tsv.keys.each do |key|
+      tsv.delete key
+    end
+    tsv[name] = v
+
+    dependencies[1..-1].each do |dep|
+      _tsv = dep.load
+      key = "None"
+      name = dep.recursive_inputs[:type]
+      tsv[name] = _tsv[key]
+    end
+    tsv
+  end
+
+  dep :compare_types do |jobname,options,dependencies|
+    %w(mutect2 somatic_sniper muse strelka).collect do |c|
+      {:inputs => options.merge(:variant_caller => c), :jobname => jobname}
+    end
+  end
+  extension :png
+  task :compare_types_img => :binary do 
+    tsvs = {}
+    dependencies.each do |dep|
+      name = dep.recursive_inputs[:variant_caller].to_s
+      tsvs[name] = dep.path
+    end
+
+    R::PNG.plot self.tmp_path, nil, <<-EOF
+rbbt.require('ggplot2')
+mutect2 = rbbt.tsv.melt(rbbt.tsv('#{tsvs["mutect2"]}')); mutect2$caller = "mutect2"
+muse = rbbt.tsv.melt(rbbt.tsv('#{tsvs["muse"]}')); muse$caller = "muse"
+strelka = rbbt.tsv.melt(rbbt.tsv('#{tsvs["strelka"]}')); strelka$caller = "strelka"
+somatic_sniper = rbbt.tsv.melt(rbbt.tsv('#{tsvs["somatic_sniper"]}')); somatic_sniper$caller = "somatic_sniper"
+
+all = rbind(mutect2, muse, strelka, somatic_sniper)
+all$ID = factor(all$ID, levels=c('golden', 'miniref', 'fullref'))
+p <- ggplot(subset(all, variable=="F-measure")) + geom_line(aes(x=ID, y=as.numeric(value), color=caller)) + geom_point(aes(x=ID, y=as.numeric(value), color=caller))
+print(p)
+    EOF
+    nil
   end
 end

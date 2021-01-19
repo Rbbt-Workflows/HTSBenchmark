@@ -11,6 +11,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    simulate=simulate{
     NEAT.rb
     genotypes.rb
+    clones.rb
    }
    miniref.rb
    bundle.rb
@@ -26,5 +27,12 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
   test_helper.rb
  }
  data=data filter="*"{
+ }
+ examples=examples filter="*"{
+  clonal=clonal{
+   Example=Example{
+    evolution.yaml
+   }
+  }
  }
 }

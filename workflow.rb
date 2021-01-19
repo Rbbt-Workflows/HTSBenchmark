@@ -222,6 +222,7 @@ module HTSBenchmark
 end
 require 'tasks/simulate/genotypes'
 require 'tasks/simulate/NEAT'
+require 'tasks/simulate/clones'
 require 'tasks/miniref.rb'
 require 'tasks/benchmark.rb'
 require 'tasks/bundle.rb'
