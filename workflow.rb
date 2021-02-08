@@ -228,6 +228,7 @@ require 'tasks/benchmark.rb'
 require 'tasks/bundle.rb'
 require 'tasks/evaluate/vcfeval'
 require 'tasks/evaluate/IGV'
+require 'tasks/compare_samples'
 
 #require 'rbbt/knowledge_base/HTSBenchmark'
 #require 'rbbt/entity/HTSBenchmark'

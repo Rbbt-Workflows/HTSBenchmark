@@ -8,18 +8,19 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
   germline.rb
   miniref.rb
   tasks=tasks{
+   benchmark.rb
+   bundle.rb
+   compare_samples.rb
+   miniref.rb
    simulate=simulate{
     NEAT.rb
-    genotypes.rb
     clones.rb
+    genotypes.rb
    }
-   miniref.rb
-   bundle.rb
-   benchmark.rb
    evaluate=evaluate{
-    vcfeval.rb
     IGV.rb
     util.rb
+    vcfeval.rb
    }
   }
  }
