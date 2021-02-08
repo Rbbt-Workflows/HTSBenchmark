@@ -45,11 +45,13 @@ module HTSBenchmark
     :positions => :cmp_discordant_positions, :reference => :placeholder, :depth => 80,
     :tumor => :placeholder, :normal => :placeholder do  |jobname,options,dependencies|
 
-    input, truth = dependencies.first.rec_dependencies.select{|dep| dep.task_name.to_s == 'mutect2' }
+    input, truth = dependencies.first.rec_dependencies.select{|dep| dep.task_name.to_s == 'mutect2' && dep.workflow.to_s == "Sample" }
+
+    options[:reference] = input.recursive_inputs[:reference]
 
     [input, truth].collect{|varcal|
-      tumor = varcal.file('BAM.bam')
-      normal = varcal.file('BAM_normal.bam')
+      tumor = varcal.step(:BAM)
+      normal = varcal.step(:BAM_normal)
 
       options[:tumor] = tumor
       options[:normal] = normal
