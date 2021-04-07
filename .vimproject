@@ -36,4 +36,9 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    }
   }
  }
+ share=share{
+  rbbt_commands=rbbt_commands{
+   bootstrap
+  }
+ }
 }

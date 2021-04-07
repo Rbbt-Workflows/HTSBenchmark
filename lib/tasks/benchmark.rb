@@ -45,7 +45,7 @@ module HTSBenchmark
   end
 
   dep :benchmark
-  input :variant_caller, :select, "Variant caller to use", "mutect2", :select_options => %w(mutect2 varscan somatic_sniper muse strelka combined_caller_vcfs consensus_somatic_variants)
+  input :variant_caller, :select, "Variant caller to use", "mutect2", :select_options => %w(mutect2 varscan somatic_sniper muse pindel delly svaba strelka combined_caller_vcfs consensus_somatic_variants)
   input :min_callers, :integer, "Mininum number of callers for consensus_somatic_variants", 2
   extension :vcf
   task :somatic_variant_calling => :text do |variant_caller,min_callers|

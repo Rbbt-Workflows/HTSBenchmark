@@ -1,9 +1,9 @@
 module HTSBenchmark
 
-  input :sample1, :string, "Sample code"
-  input :sample2, :string, "Sample code"
-  dep Sample, :mutect2 do |jobname,options|
-    options.values_at(:sample1, :sample2).
+  input :sample_input, :string, "Sample code for input sample"
+  input :sample_truth, :string, "Sample code for truth sample"
+  dep Sample, :vcf_file do |jobname,options|
+    options.values_at(:sample_input, :sample_truth).
       collect{|s| {:jobname => s, :inputs => options} }
   end
   dep_task :cmp_vcfeval, HTS, :vcfeval, :reference => :placeholder do |jobname,options,dependencies|

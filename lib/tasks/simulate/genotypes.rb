@@ -41,7 +41,7 @@ module HTSBenchmark
   end
 
   dep :simulate_germline_hg38_lf_chr
-  dep Sequence, :reference, :positions => :simulate_germline_hg38_lf_chr, :organism => HG38_ORGANISM
+  dep Sequence, :reference, :positions => :simulate_germline_hg38_lf_chr, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false
   task :simulate_germline_hg38 => :array do 
     TSV.traverse step(:reference), :into => :stream do |mutation, reference|
       next if mutation.split(":")[2].split(",").include? reference
