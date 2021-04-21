@@ -1,7 +1,7 @@
 module HTSBenchmark
 
   dep :simulated_sample
-  dep_task :aligned_BAM, HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder, :reference => 'hg38', :sequencing_center => "Simulation", :platform => "NEAT_GenReads" do |jobname,options,dependencies|
+  dep_task :aligned_BAM, HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder, :reference => 'hg38', :sequencing_center => "Simulation", :platform => "NEAT_GenReads", :sample_name => "ARGO-NEAT_tumor", :read_group_name => "ARGO-NEAT_tumor-RG"  do |jobname,options,dependencies|
     neat = dependencies.flatten.select{|dep| dep.task_name.to_s == "simulated_sample"}.first
     options[:fastq1] = neat.file('output/tumor_read1.fq.gz')
     options[:fastq2] = neat.file('output/tumor_read2.fq.gz')
@@ -9,7 +9,7 @@ module HTSBenchmark
   end
 
   dep :simulated_sample
-  dep_task :aligned_BAM_normal, HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder, :reference => 'hg38', :sequencing_center => "Simulation", :platform => "NEAT_GenReads" do |jobname,options,dependencies|
+  dep_task :aligned_BAM_normal, HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder, :reference => 'hg38', :sequencing_center => "Simulation", :platform => "NEAT_GenReads", :sample_name => "ARGO-NEAT_normal", :read_group_name => "ARGO-NEAT_normal-RG" do |jobname,options,dependencies|
     neat = dependencies.flatten.select{|dep| dep.task_name.to_s == "simulated_sample"}.first
     options[:fastq1] = neat.file('output/normal_read1.fq.gz')
     options[:fastq2] = neat.file('output/normal_read2.fq.gz')
@@ -29,8 +29,6 @@ module HTSBenchmark
 
     germline = neat.file('output/normal_golden.vcf')
     tumor = neat.file('output/tumor_golden.vcf')
-
-    #somatic = self.rec_dependencies.select{|dep| dep.task_name.to_s == 'minify_vcf'}.collect{|dep| dep.path}
 
     reference = nil
     vcf_files = []
