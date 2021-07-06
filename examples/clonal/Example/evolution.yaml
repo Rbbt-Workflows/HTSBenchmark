@@ -1,0 +1,30 @@
+---
+- 
+  id: founder
+  fraction: 0
+  mutations:
+    - 1:10000:A
+    - 1:20000:A
+    - 1:30000:A
+-
+  parent: founder
+  fraction: 0.3
+  mutations:
+    - 2:10000:A
+    - 2:20000:A
+    - 2:30000:A
+-
+  parent: founder
+  fraction: 0.5
+  mutations:
+    - 3:10000:A
+    - 3:20000:A
+    - 3:30000:A
+-
+  parent: 2
+  fraction: 0.2
+  mutations:
+    - 4:10000:A
+    - 4:20000:A
+    - 4:30000:A
+    - 4:50000:A

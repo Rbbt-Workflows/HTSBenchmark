@@ -7,12 +7,15 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
   NEAT_genreads.rb
   germline.rb
   miniref.rb
+  SV.rb
+
   tasks=tasks{
    benchmark.rb
    bundle.rb
    compare_samples.rb
    miniref.rb
    simulate=simulate{
+    SV.rb
     NEAT.rb
     clones.rb
     genotypes.rb
@@ -34,6 +37,9 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    Example=Example{
     evolution.yaml
    }
+  }
+  add_SV_to_reference=add_SV_to_reference{
+   SVs
   }
  }
  share=share{

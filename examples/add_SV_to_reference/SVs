@@ -1,0 +1,5 @@
+#: :type=:list
+#ID	Type	Chromosome	Start	End	Target chromosome	Target start	Target end
+DUP.1	INS	chr1	1000	1100	chr2	200
+DEL.1	DEL	chr1	1000	1100
+INV.1	INV	chr2	1200	1400	chr3	200

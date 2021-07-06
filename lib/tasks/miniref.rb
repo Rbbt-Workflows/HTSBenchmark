@@ -27,7 +27,7 @@ module HTSBenchmark
   input :padding, :integer, "Extra bases to add to reference", 1_000
   dep :miniref_sizes
   extension 'fa.gz'
-  task :miniref => :text do |organism,reference,padding|
+  task :miniref => :binary do |organism,reference,padding|
     require 'miniref'
 
     sizes = step(:miniref_sizes).load
@@ -57,4 +57,62 @@ module HTSBenchmark
     nil
   end
 
+  dep :miniref
+  extension 'fa.gz'
+  task :miniref_ploidy => :binary do
+    sout = Misc.open_pipe do |sin|
+      TSV.traverse step(:miniref), :type => :array do |line|
+        if line =~ />/
+          sin.puts ">copy-1_" + line[1..-1]
+        else
+          sin.puts line
+        end
+      end
+      TSV.traverse step(:miniref), :type => :array do |line|
+        if line =~ />/
+          sin.puts ">copy-2_" + line[1..-1]
+        else
+          sin.puts line
+        end
+      end
+    end
+
+    CMD.cmd("bgzip -c > #{self.tmp_path}", :in => sout)
+    nil
+  end
+
+  input :vcf, :file, "VCF to change poidy to", nil, :nofile => true
+  input :haploid_reference, :file, "FASTA file with haploid reference", nil, :nofile => true
+  extension :vcf
+  task :vcf_ploidy => :binary do |vcf,haploid_reference|
+    copies = {}
+    TSV.traverse haploid_reference, :type => :array do |line|
+      if m = line.match(/>((copy-\d+)_([^\s+]*))/)
+        orig, copy, real = m.captures
+        real = real.sub('chr', '')
+        copies[real] ||= []
+        copies[real] << orig
+      end
+    end
+
+    io = TSV.traverse vcf, :type => :array, :into => :stream do |line|
+      next line if line[0] == "#"
+      parts = line.split("\t")
+      chr, pos, _id, ref, alt   = parts
+
+      if chr.include? 'copy-'
+        copy = chr
+      else
+        chr = chr.sub('chr', '')
+        chr_copies = copies[chr]
+        num = Misc.digest([chr, pos, ref, alt] * ":").chars.inject(0){|acc,e| acc += e.hex }
+        copy = chr_copies[num % chr_copies.length]
+      end
+
+      ([copy] + parts[1..-1]) * "\t"
+    end
+
+    Misc.consume_stream(io, false, self.tmp_path)
+    nil
+  end
 end

@@ -9,6 +9,7 @@ module NEATGenreads
   end
 
   CMD.tool "genReads.py", Rbbt.software.opt.NEATGenreads, "genReads.py --help"
+
 end
 
 if __FILE__ == $0
