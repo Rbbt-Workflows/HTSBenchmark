@@ -9,9 +9,9 @@ module HTSBenchmark
       line = line.chomp
       if line[0] == '>'
         if chr
-          ranges[chr].each do |start,eend|
+          ranges[chr].each do |start,eend,id|
             fragments[chr] ||= {}
-            fragments[chr][[start, eend]] = chr_txt[start-1..eend-1]
+            fragments[chr][[start, eend,id]] = chr_txt[start-1..eend-1]
           end if ranges[chr]
         end
         chr = line.split(" ").first[1..-1]
@@ -22,9 +22,9 @@ module HTSBenchmark
     end
 
     if chr
-      ranges[chr].each do |start,eend|
+      ranges[chr].each do |start,eend,id|
         fragments[chr] ||= {}
-        fragments[chr][[start, eend]] = chr_txt[start..eend]
+        fragments[chr][[start, eend,id]] = chr_txt[start..eend]
       end if ranges[chr]
     end
 
@@ -213,15 +213,15 @@ module HTSBenchmark
 
       if !(chr.include?('copy-') || copies[chr.sub('chr', '')].nil?)
         chr_copies = copies[chr.sub('chr', '')]
-        num = Misc.digest([id, chr, start, eend, type] * ":").chars.inject(0){|acc,e| acc += e.hex }
+        num = Misc.digest([chr, start, eend, type] * ":").chars.inject(0){|acc,e| acc += e.hex }
         chr = chr_copies[num % chr_copies.length]
       end
 
-      target_chr = chr if target_chr == 'same'
+      target_chr = chr if target_chr == 'same' || target_chr == 'cis'
 
       if target_chr && !(target_chr.include?('copy-') || copies[target_chr.sub('chr', '')].nil?)
         chr_copies = copies[target_chr.sub('chr', '')]
-        num = Misc.digest([id, chr, start, eend, type, 'target'] * ":").chars.inject(0){|acc,e| acc += e.hex }
+        num = Misc.digest([chr, start, eend, target_chr, type] * ":").chars.inject(0){|acc,e| acc += e.hex }
         target_chr = chr_copies[num % chr_copies.length]
       end
 
@@ -283,7 +283,7 @@ module HTSBenchmark
 
       if !(chr.include?('copy-') || copies[chr.sub('chr', '')].nil?)
         chr_copies = copies[chr.sub('chr', '')]
-        num = Misc.digest([chr, pos, alt] * ":").chars.inject(0){|acc,e| acc += e.hex }
+        num = Misc.digest([chr, pos] * ":").chars.inject(0){|acc,e| acc += e.hex }
         chr = chr_copies[num % chr_copies.length]
       end
 
@@ -293,6 +293,7 @@ module HTSBenchmark
 
 
     new_positions = HTSBenchmark.duplicate_positions(mutations_chr, duplications)
+
     mutations_chr = HTSBenchmark.shift_ranges_by_inserts(mutations_chr, insertions)
 
     new_positions.each do |chr,pos,id|
@@ -309,6 +310,7 @@ module HTSBenchmark
     mutations_chr.each do |chr,list| 
       list.collect{|e| 
         start, eend, id = e
+        iii [chr, start, eend, id] if id.include?("SV:")
         mutation_translations[id] ||= []
         next if start.nil?
         _chr, _pos, alt = id.split(":")

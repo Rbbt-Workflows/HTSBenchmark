@@ -10,9 +10,6 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
   SV.rb
 
   tasks=tasks{
-   benchmark.rb
-   bundle.rb
-   compare_samples.rb
    miniref.rb
    simulate=simulate{
     SV.rb
@@ -25,6 +22,9 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     util.rb
     vcfeval.rb
    }
+   benchmark.rb
+   bundle.rb
+   compare_samples.rb
   }
  }
  test=test {
@@ -35,7 +35,12 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
  examples=examples filter="*"{
   clonal=clonal{
    Example=Example{
+    evolution_trivial.yaml
+    evolution_trivial_SV.yaml
+    evolution_trivial_SV_INS.yaml
     evolution.yaml
+    evolution_SVs.yaml
+    evolution_save.yaml
    }
   }
   add_SV_to_reference=add_SV_to_reference{

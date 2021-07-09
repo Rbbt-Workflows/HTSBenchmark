@@ -25,16 +25,16 @@ module HTSBenchmark
   input :organism, :string, "Organism code, no build", "Hsa"
   input :reference, :string, "Reference code", "hg38", :jobname => true
   input :padding, :integer, "Extra bases to add to reference", 1_000
+  input :do_vcf, :boolean, "Minimize also the vcfs", false
   dep :miniref_sizes
   extension 'fa.gz'
-  task :miniref => :binary do |organism,reference,padding|
+  task :miniref => :binary do |organism,reference,padding,do_vcf|
     require 'miniref'
 
     sizes = step(:miniref_sizes).load
     sizes[:padding] = padding
 
     output = file(reference)
-
 
     reference_path = Rbbt.share.organisms[organism][reference]
     files = reference_path.glob_all("**/*")
@@ -44,6 +44,7 @@ module HTSBenchmark
       target = output[subpath].find.remove_extension('.gz')
       type = case file
              when /\.vcf(?:\.gz)?$/
+               next unless do_vcf
                HTSBenchmark.minify_vcf(file, target, sizes)
 
              when /\.fa(?:sta)?(?:\.gz)?$/
@@ -105,7 +106,7 @@ module HTSBenchmark
       else
         chr = chr.sub('chr', '')
         chr_copies = copies[chr]
-        num = Misc.digest([chr, pos, ref, alt] * ":").chars.inject(0){|acc,e| acc += e.hex }
+        num = Misc.digest([chr, pos] * ":").chars.inject(0){|acc,e| acc += e.hex }
         copy = chr_copies[num % chr_copies.length]
       end
 

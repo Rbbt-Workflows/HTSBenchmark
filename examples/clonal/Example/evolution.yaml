@@ -1,30 +1,39 @@
 ---
 - 
   id: founder
-  fraction: 0
+  fraction: 0.5
   mutations:
     - 1:10000:A
     - 1:20000:A
     - 1:30000:A
--
-  parent: founder
-  fraction: 0.3
-  mutations:
-    - 2:10000:A
-    - 2:20000:A
-    - 2:30000:A
--
+  SVs:
+    - - DEL
+      - 1
+      - 15000
+      - 35000
+- 
   parent: founder
   fraction: 0.5
   mutations:
-    - 3:10000:A
-    - 3:20000:A
-    - 3:30000:A
--
-  parent: 2
-  fraction: 0.2
-  mutations:
-    - 4:10000:A
-    - 4:20000:A
-    - 4:30000:A
-    - 4:50000:A
+    - 1:40000:A
+    - 1:50000:A
+    - 1:60000:T
+  SVs:
+    - - INS
+      - 1
+      - 40000
+      - 70000
+      - cis
+      - 80000
+    - - INS
+      - 1
+      - 40000
+      - 70000
+      - cis
+      - 80000
+    - - INS
+      - 1
+      - 40000
+      - 70000
+      - cis
+      - 80000
