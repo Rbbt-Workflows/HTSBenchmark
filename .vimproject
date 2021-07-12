@@ -4,12 +4,31 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
  bin=bin filter="*"{
  }
  lib=lib {
-  NEAT_genreads.rb
-  germline.rb
-  miniref.rb
-  SV.rb
+  tools=tools{
+   NEAT_genreads.rb
+  }
+  HTSBenchmark=HTSBenchmark{
+   miniref.rb
+   SV.rb
+  }
 
   tasks=tasks{
+   HTSBenchmark=HTSBenchmark{
+    genotypes.rb
+    references.rb
+    gen_reads.rb
+
+    sample.rb
+
+    SV.rb
+
+    clone.rb
+
+    population.rb
+   }
+
+   #### OLD
+
    miniref.rb
    simulate=simulate{
     SV.rb
@@ -26,26 +45,33 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    bundle.rb
    compare_samples.rb
   }
- }
- test=test {
-  test_helper.rb
- }
- data=data filter="*"{
+
+  NEAT_genreads.rb
+  germline.rb
+  miniref.rb
+  SV.rb
+
  }
  examples=examples filter="*"{
-  clonal=clonal{
-   Example=Example{
+  population=population{
+   Files=.files{
     evolution_trivial.yaml
     evolution_trivial_SV.yaml
     evolution_trivial_SV_INS.yaml
     evolution.yaml
     evolution_SVs.yaml
+    evolution_SVs_haploid.yaml
     evolution_save.yaml
    }
   }
   add_SV_to_reference=add_SV_to_reference{
    SVs
   }
+ }
+ test=test {
+  test_helper.rb
+ }
+ data=data filter="*"{
  }
  share=share{
   rbbt_commands=rbbt_commands{

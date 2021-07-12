@@ -1,6 +1,6 @@
-require File.join(File.expand_path(File.dirname(__FILE__)), 'test_helper.rb')
+require File.join(File.expand_path(File.dirname(__FILE__)), '../test_helper.rb')
 require 'rbbt-util'
-require 'SV'
+require 'HTSBenchmark/SV'
 
 class TestSV < Test::Unit::TestCase
   def test_collect_fragment
@@ -24,8 +24,8 @@ AAAAACCCCCC
     }
 
     fragments = HTSBenchmark.collect_fragments(input, ranges)
-    assert_equal fragments["chr1"][[3,5]], "ACC"
-    assert_equal fragments["chr2"][[3,5]], "AAA"
+    assert_equal fragments["chr1"][[3,5,nil]], "ACC"
+    assert_equal fragments["chr2"][[3,5,nil]], "AAA"
   end
 
   def test_remove_fragment
@@ -270,8 +270,46 @@ INV.1,INV,chr2,6,9,chr3,2
     svs = TSV.open(StringIO.new(svs_txt))
 
     reference, mutation_translation = TmpFile.with_file(reference) do |reference|
-      Path.setup(reference)
-      reference_io, mutation_translation = HTSBenchmark.apply_SVs reference, mutations, svs
+      reference_io  = HTSBenchmark.apply_SVs_reference reference, svs
+      mutation_translation = HTSBenchmark.transpose_mutations svs, mutations
+      [reference_io.read, mutation_translation]
+    end
+
+    assert reference.include?("abcde90fg123456hijabcd")
+    assert_equal ["chr2:10:chr1-1(1)"], mutation_translation["chr1:1:chr1-1(1)"]
+  end
+
+  def ___test_apply_SVs
+    reference =<<-EOF
+>chr1
+12345678901234567890
+>chr2
+abcdefghijabcdefghij
+>chr3
+ABCDEFGHIJABCDEFGHIJ
+>chr4
+12345678901234567890
+>chr5
+ABCDEFGHIJABCDEFGHIJ
+    EOF
+
+    svs_txt1 =<<-EOF
+#: :type=:list#:sep=,
+#ID,Type,Chromosome,Start,End,Target chromosome,Target start,Target end
+DUP.1,INS,chr1,1,6,chr2,8
+    EOF
+
+    svs_txt2 =<<-EOF
+#: :type=:list#:sep=,
+#ID,Type,Chromosome,Start,End,Target chromosome,Target start,Target end
+DUP.2,INS,chr1,9,10,chr2,6
+    EOF
+
+    svs = TSV.open(StringIO.new(svs_txt))
+
+    reference, mutation_translation = TmpFile.with_file(reference) do |reference|
+      reference_io  = HTSBenchmark.apply_SVs_reference reference, svs
+      mutation_translation = HTSBenchmark.transpose_mutations reference, svs, mutations
       [reference_io.read, mutation_translation]
     end
 

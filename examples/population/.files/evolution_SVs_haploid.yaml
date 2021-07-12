@@ -1,0 +1,28 @@
+---
+- 
+  id: founder
+  fraction: 0.3
+  mutations:
+    - copy-1_chr1:778554:G
+    - copy-1_chr1:778570:G
+    - copy-1_chr1:778637:G
+  SVs:
+    - - DEL
+      - copy-2_chr1
+      - 800000
+      - 829000
+-
+  parent: founder
+  fraction: 0.7
+  mutations:
+    - copy-1_chr1:827578:C
+    - copy-1_chr1:827710:A
+    - copy-1_chr1:831531:A
+    - copy-1_chr1:854639:C
+  SVs:
+    - - INS
+      - copy-1_chr1
+      - 840000
+      - 860000
+      - cis
+      - 700000

@@ -1,7 +1,0 @@
----
-- 
-  id: founder
-  fraction: 1
-  mutations:
-    - 1:20000:A
-    - 1:30000:A
