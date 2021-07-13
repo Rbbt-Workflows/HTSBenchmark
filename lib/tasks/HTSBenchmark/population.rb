@@ -101,7 +101,7 @@ module HTSBenchmark
     total = population_genotypes.file('total_mutations_clean')
     {:inputs => options.merge(:mutations => total)}
   end
-  dep :simulate_normal, :mutations => :genotype_germline_hg38, "HTSBenchmark#miniref_sizes" => :miniref_sizes, :jobname => "Default"
+  dep :simulate_normal, :mutations => :genotype_germline_hg38, "HTSBenchmark#genotype_somatic_hg38" => :skip, "HTSBenchmark#miniref_sizes" => :miniref_sizes, :jobname => "Default"
   dep :clone, :germline => :placeholder, :somatic => :placeholder, :reference => :placeholder, :compute => :produce, :depth => 90 do |jobname,options,dependencies|
     normal = dependencies.flatten.select{|dep| dep.task_name === :simulate_normal }.first
     population_genotypes = dependencies.flatten.select{|dep| dep.task_name === :population_genotypes }.first

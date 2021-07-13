@@ -8,6 +8,7 @@ module HTSBenchmark
   input :depth, :integer, "Sequencing depth to simulate", 60
   input :haploid_reference, :boolean, "Reference is haploid (each chromosome copy separate)"
   input :sample_name, :string, "Sample name", nil, :jobname => true
+  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :mutations => :skip
   task :NEAT_simulate_DNA => :array do |reference,depth,haploid,sample_name|
 
     if haploid
@@ -16,7 +17,11 @@ module HTSBenchmark
 
     mutations_vcf = file('mutations.vcf')
     Open.write(mutations_vcf) do |sin|
-      vcf = Sequence.job(:mutations_to_vcf, nil, "Sequence#reference" => step(:mutations_to_reference))
+      vcf = step(:mutations_to_vcf)
+      #vcf = Sequence.job(:mutations_to_vcf, nil, "Sequence#reference" => step(:mutations_to_reference))
+      #Misc.with_env "RBBT_UPDATE", "TRUE" do
+      #  vcf.clean unless vcf.updated?
+      #end
       TSV.traverse vcf, :type => :array do |line|
         l = if line =~ /^(?:##)/ 
             line

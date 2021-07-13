@@ -12,7 +12,7 @@ module HTSBenchmark
         if chr
           ranges[chr].each do |start,eend,id|
             fragments[chr] ||= {}
-            fragments[chr][[start, eend,id]] = chr_txt[start-1..eend-1]
+            fragments[chr][[start, eend, id]] = chr_txt[start-1..eend-1]
           end if ranges[chr]
         end
         chr = line.split(" ").first[1..-1]
@@ -25,7 +25,7 @@ module HTSBenchmark
     if chr
       ranges[chr].each do |start,eend,id|
         fragments[chr] ||= {}
-        fragments[chr][[start, eend,id]] = chr_txt[start..eend]
+        fragments[chr][[start, eend,id]] = chr_txt[start-1..eend-1]
       end if ranges[chr]
     end
 
@@ -177,11 +177,15 @@ module HTSBenchmark
       if ! duplications[chr].nil?
         fragments = duplications[chr].sort_by{|s| s }
         positions[chr].each do |pos,eend,id|
+          tpos_offset_acc = {}
           fragments.each do |start,eend,tchr,tpos,teend,invert|
             next unless start <= pos && eend >= pos
             chr_offset = Misc.sum(chr_offsets[tchr].sort_by{|t,l| t }.select{|t,l| t < tpos }.collect{|t,l| l }).to_i
+            tpos_offset_acc[[tchr, tpos]] ||= []
+            tpos_offset = Misc.sum(tpos_offset_acc[[tchr, tpos]]).to_i
             offset = invert ? eend - pos : pos - start
-            new_pos = [tchr, chr_offset + tpos + offset, id]
+            tpos_offset_acc[[tchr, tpos]] << eend - start + 1
+            new_pos = [tchr, chr_offset + tpos + offset + tpos_offset, id]
             new_positions <<  new_pos
           end
         end

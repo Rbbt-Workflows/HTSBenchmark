@@ -279,6 +279,73 @@ INV.1,INV,chr2,6,9,chr3,2
     assert_equal ["chr2:10:chr1-1(1)"], mutation_translation["chr1:1:chr1-1(1)"]
   end
 
+  def test_apply_tandem_INS
+    reference =<<-EOF
+>chr1
+123456789--END
+>chr2
+1234567890123456789
+    EOF
+
+
+    mutations = <<-EOF.split("\n")
+chr1:2:chr1-2(1)
+    EOF
+
+    svs_txt =<<-EOF
+#: :type=:list#:sep=,
+#ID,Type,Chromosome,Start,End,Target chromosome,Target start,Target end
+DUP.1,INS,chr1,1,4,chr1,9
+DUP.2,INS,chr1,1,4,chr1,9
+DUP.3,INS,chr1,1,4,chr1,9
+    EOF
+
+    svs = TSV.open(StringIO.new(svs_txt))
+
+    reference, mutation_translation = TmpFile.with_file(reference) do |reference|
+      reference_io  = HTSBenchmark.apply_SVs_reference reference, svs
+      mutation_translation = HTSBenchmark.transpose_mutations svs, mutations
+      [reference_io.read, mutation_translation]
+    end
+
+    assert reference.include?("123456781234123412349--END")
+    assert mutation_translation["chr1:2:chr1-2(1)"].include?("chr1:14:chr1-2(1)")
+  end
+
+
+  def test_apply_tandem_INS2
+    reference =<<-EOF
+>chr1
+123456789--END
+>chr2
+1234567890123456789
+    EOF
+
+
+    mutations = <<-EOF.split("\n")
+chr1:7:chr1-2(1)
+    EOF
+
+    svs_txt =<<-EOF
+#: :type=:list#:sep=,
+#ID,Type,Chromosome,Start,End,Target chromosome,Target start,Target end
+DUP.1,INS,chr1,6,8,chr1,4
+DUP.2,INS,chr1,6,8,chr1,4
+DUP.3,INS,chr1,6,8,chr1,4
+    EOF
+
+    svs = TSV.open(StringIO.new(svs_txt))
+
+    reference, mutation_translation = TmpFile.with_file(reference) do |reference|
+      reference_io  = HTSBenchmark.apply_SVs_reference reference, svs
+      mutation_translation = HTSBenchmark.transpose_mutations svs, mutations
+      [reference_io.read, mutation_translation]
+    end
+
+    ppp reference
+    assert reference.include?("123678678678456789--END")
+    assert mutation_translation["chr1:2:chr1-2(1)"].include?("chr1:14:chr1-2(1)")
+  end
   def ___test_apply_SVs
     reference =<<-EOF
 >chr1

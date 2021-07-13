@@ -16,6 +16,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    HTSBenchmark=HTSBenchmark{
     genotypes.rb
     references.rb
+
     gen_reads.rb
 
     sample.rb
@@ -26,40 +27,16 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
 
     population.rb
    }
-
-   #### OLD
-
-   miniref.rb
-   simulate=simulate{
-    SV.rb
-    NEAT.rb
-    clones.rb
-    genotypes.rb
-   }
-   evaluate=evaluate{
-    IGV.rb
-    util.rb
-    vcfeval.rb
-   }
-   benchmark.rb
-   bundle.rb
-   compare_samples.rb
   }
-
-  NEAT_genreads.rb
-  germline.rb
-  miniref.rb
-  SV.rb
-
  }
  examples=examples filter="*"{
   population=population{
    Files=.files{
+    evolution_SVs.yaml
     evolution_trivial.yaml
     evolution_trivial_SV.yaml
     evolution_trivial_SV_INS.yaml
     evolution.yaml
-    evolution_SVs.yaml
     evolution_SVs_haploid.yaml
     evolution_save.yaml
    }
