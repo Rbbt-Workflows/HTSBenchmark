@@ -119,7 +119,6 @@ module HTSBenchmark
   input :mutations, :array, "List of mutations to partially cover"
   input :min, :integer, "Minimum number of variants per chromosome to cover", 100
   task :miniref_sizes => :tsv do |mutations,min|
-    require 'miniref'
     sizes = HTSBenchmark.calculate_sizes(mutations, min)
     TSV.setup(sizes, :key_field => "Chromosome", :fields => ["Size"], :type => :single, :cast => :to_i)
   end
@@ -131,7 +130,6 @@ module HTSBenchmark
   input :sizes, :tsv, "Sizes of each chromosome's beggining to preserve"
   extension 'fa.gz'
   task :miniref => :binary do |organism,reference,padding,do_vcf,sizes|
-    require 'miniref'
 
     sizes[:padding] = padding
 
