@@ -9,6 +9,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
   }
   HTSBenchmark=HTSBenchmark{
    miniref.rb
+   sliceref.rb
    SV.rb
   }
 
@@ -26,6 +27,8 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     clone.rb
 
     population.rb
+
+    bundle.rb
    }
   }
  }

@@ -44,7 +44,7 @@ module HTSBenchmark
     CMD.cmd(:zcat, "'#{reference}' > #{reference_gunzip}")
 
     Open.mkdir output
-    CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference_gunzip}' -p 2 -M 0 -R 101 --pe 100 10 -o '#{output[sample_name]}' -v '#{mutations_vcf}' --vcf")
+    CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference_gunzip}' -p 2 -M 0 -R 101 --pe 100 10 -o '#{output[sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
 
     output.glob("*.fq").each do |file|
       CMD.cmd("bgzip #{file}")

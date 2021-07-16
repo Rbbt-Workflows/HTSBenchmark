@@ -94,6 +94,7 @@ module HTSBenchmark
     Dir.glob(files_dir + "/clone_*")
   end
 
+  input :bundle, :boolean, "Production run, do VCFs for miniref bundle", false
   dep :genotype_germline_hg38, :jobname => "Default", :compute => :produce
   dep :population_genotypes, :compute => :produce, :germline => :genotype_germline_hg38
   dep :miniref_sizes, :mutations => :placeholder do |jobname,options,dependencies|
@@ -101,7 +102,12 @@ module HTSBenchmark
     total = population_genotypes.file('total_mutations_clean')
     {:inputs => options.merge(:mutations => total)}
   end
-  dep :simulate_normal, :mutations => :genotype_germline_hg38, "HTSBenchmark#genotype_somatic_hg38" => :skip, "HTSBenchmark#miniref_sizes" => :miniref_sizes, :jobname => "Default"
+  dep :simulate_normal, 
+    :mutations => :genotype_germline_hg38, 
+    "HTSBenchmark#genotype_somatic_hg38" => :skip, 
+    "HTSBenchmark#miniref_sizes" => :miniref_sizes, 
+    :do_vcf => :bundle,
+    :jobname => "Default"
   dep :clone, :germline => :placeholder, :somatic => :placeholder, :reference => :placeholder, :compute => :produce, :depth => 90 do |jobname,options,dependencies|
     normal = dependencies.flatten.select{|dep| dep.task_name === :simulate_normal }.first
     population_genotypes = dependencies.flatten.select{|dep| dep.task_name === :population_genotypes }.first

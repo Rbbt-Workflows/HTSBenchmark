@@ -8,17 +8,17 @@ module HTSBenchmark
     somatic + germline
   end
 
-  dep :genotype_germline_hg38
-  dep :genotype_somatic_hg38
-  dep :merge_somatic_germline, :somatic => :genotype_somatic_hg38, :germline => :genotype_germline_hg38
+  dep :genotype_germline_hg38, :compute => :produce
+  dep :genotype_somatic_hg38, :compute => :produce
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   dep :miniref_ploidy, :sizes => :miniref_sizes, :jobname => 'hg38', :organism => "Hsa"
+  dep :merge_somatic_germline, :somatic => :genotype_somatic_hg38, :germline => :genotype_germline_hg38
   dep_task :simulate_tumor, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :merge_somatic_germline, :haploid_reference => true, :depth => 60 do |jobname,options|
     {:inputs => options, :jobname => jobname + "_tumor"}
   end
 
-  dep :genotype_germline_hg38
-  dep :genotype_somatic_hg38
+  dep :genotype_germline_hg38, :compute => :produce
+  dep :genotype_somatic_hg38, :compute => :produce
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   dep :miniref_ploidy, :sizes => :miniref_sizes, :jobname => 'hg38', :organism => "Hsa"
   dep_task :simulate_normal, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :genotype_germline_hg38, :haploid_reference => true, :depth => 30 do |jobname,options|
