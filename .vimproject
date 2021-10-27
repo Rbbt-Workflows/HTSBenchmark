@@ -28,6 +28,8 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
 
     population.rb
 
+    simulate_population.rb
+
     bundle.rb
    }
   }

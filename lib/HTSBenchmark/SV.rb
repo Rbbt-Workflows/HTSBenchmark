@@ -43,6 +43,7 @@ module HTSBenchmark
         if line[0] == '>'
           if chr
             removals[chr].sort_by{|s,e| s }.reverse.each do |start,eend|
+              next if chr_txt.length + 1 < start
               chr_txt[start-1..eend-1] = "" 
             end if removals[chr]
             output << chr_txt << "\n"
@@ -57,6 +58,7 @@ module HTSBenchmark
 
       if chr
         removals[chr].sort_by{|s,e| s }.reverse.each do |start,eend|
+          next if chr_txt.length + 1 < start
           chr_txt[start-1..eend-1] = "" 
         end if removals[chr]
         output << chr_txt << "\n"
@@ -77,6 +79,7 @@ module HTSBenchmark
           if chr
             offset = 0
             inserts[chr].sort_by{|s,i| s }.reverse.each do |start,insert|
+              next if chr_txt.length + 1 < start
               chr_txt[start-2..start-2] = chr_txt[start-2] + insert 
             end if inserts[chr]
             output << chr_txt << "\n"
@@ -91,6 +94,7 @@ module HTSBenchmark
 
       if chr
         inserts[chr].sort_by{|s,i| s }.reverse.each do |start,insert|
+          next if chr_txt.length + 1 < start
           chr_txt[start-2..start-2] = chr_txt[start-2] + insert 
         end if inserts[chr]
         output << chr_txt << "\n"
@@ -121,8 +125,10 @@ module HTSBenchmark
               end
             end
           end
-          acc.nil? ? [nil, nil, id] : [s - acc, e - acc, id]
-        }
+          #acc.nil? ? [nil, nil, id] : [s - acc, e - acc, id]
+          next if acc.nil?
+          [s - acc, e - acc, id]
+        }.compact
       end
     end
 
@@ -151,8 +157,10 @@ module HTSBenchmark
               break
             end
           end
-          acc.nil? ? [nil, nil, id] : [s + acc, e + acc, id]
-        }
+          #acc.nil? ? [nil, nil, id] : [s + acc, e + acc, id]
+          next if acc.nil?
+          [s + acc, e + acc, id]
+        }.compact
       end
     end
 
@@ -392,6 +400,7 @@ module HTSBenchmark
       type, chr, start, eend, target_chr, target_start, target_end = values
 
       new_sources = position_translations[id + '-source']
+      next unless new_sources.any?
       new_source = new_sources.shuffle.first.split(":")
       new_targets = position_translations[id + '-target']
       source_diff = new_source.last.to_i + eend.to_i - start.to_i
@@ -403,6 +412,7 @@ module HTSBenchmark
        end
       else
         new_target = new_targets.shuffle.first
+        next unless new_targets.any?
         new_target = new_target.split(":")
         target_diff = target_end.nil? ? nil : new_target.last.to_i + target_end.to_i - target_start.to_i
         transposed_svs[id] = [type, new_source.first, new_source.last, source_diff, new_target.first, new_target.last, target_diff]

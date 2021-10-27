@@ -342,9 +342,8 @@ DUP.3,INS,chr1,6,8,chr1,4
       [reference_io.read, mutation_translation]
     end
 
-    ppp reference
     assert reference.include?("123678678678456789--END")
-    assert mutation_translation["chr1:2:chr1-2(1)"].include?("chr1:14:chr1-2(1)")
+    assert mutation_translation["chr1:7:chr1-2(1)"].include?("chr1:16:chr1-2(1)")
   end
   def ___test_apply_SVs
     reference =<<-EOF

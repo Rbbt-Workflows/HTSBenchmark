@@ -1,4 +1,5 @@
 require 'HTSBenchmark/miniref'
+require 'HTSBenchmark/sliceref'
 
 module HTSBenchmark
   def self.mutation_reference(mutations, reference_file)
@@ -9,6 +10,8 @@ module HTSBenchmark
     contigs.each do |contig|
       if m = contig.match(/^(copy-\d+)_(?:chr)?(.*)/)
         copy, orig = m.captures
+      else
+        orig = contig
       end
       copies[orig] ||= []
       copies[orig] << contig
@@ -16,11 +19,15 @@ module HTSBenchmark
 
     mutation_ranges = mutations.collect do |m| 
       chr, pos, alt = m.split(":")
+      chr = chr.sub(/^chr/,'')
 
       if alternatives = copies[chr]
         num = Misc.digest([chr, pos] * ":").chars.inject(0){|acc,e| acc += e.hex }
         chr = alternatives[num % alternatives.length]
       end
+
+      chr = "chr" + chr if sizes[chr].nil? && chr !~ /^(copy|chr)/
+      chr = chr.sub(/^chr/,'') if sizes[chr].nil? && chr =~ /^chr/
 
       next if sizes[chr].nil?
 
@@ -57,6 +64,9 @@ module HTSBenchmark
           num = Misc.digest([chr, pos] * ":").chars.inject(0){|acc,e| acc += e.hex }
           chr = alternatives[num % alternatives.length]
         end
+
+        chr = "chr" + chr if sizes[chr].nil? && chr !~ /^(copy|chr)/
+        chr = chr.sub(/^chr/,'') if sizes[chr].nil? && chr =~ /^chr/
 
         next if sizes[chr].nil?
 
@@ -99,6 +109,7 @@ module HTSBenchmark
     chr = chr.to_s.sub(/^chr/, '')
     target_chr = target_chr.to_s.sub(/^chr/, '') if target_chr && ! target_chr.empty?
     target_chr = target_chr.to_s
+
     if !chr.include?('copy-') 
       chr_copies = %w(copy-1_chr copy-2_chr)
       num = Misc.digest([chr, start, eend, type] * ":").chars.inject(0){|acc,e| acc += e.hex }
@@ -107,10 +118,10 @@ module HTSBenchmark
 
     target_chr = chr if target_chr == 'same' || target_chr == 'cis'
 
-    if target_chr && ! target_chr.empty? && !target_chr.include?('copy-')
+    if target_chr && ! target_chr.empty? && ! target_chr.include?('copy-')
       chr_copies = %w(copy-1_chr copy-2_chr)
       num = Misc.digest([chr, start, eend, target_chr, type] * ":").chars.inject(0){|acc,e| acc += e.hex }
-      target_chr = chr_copies[num % chr_copies.length] + chr
+      target_chr = chr_copies[num % chr_copies.length] + target_chr
     end
 
     [type, chr, start, eend, target_chr, target_start, target_end]
@@ -190,4 +201,37 @@ module HTSBenchmark
     mutation_reference_tsv = HTSBenchmark.mutation_reference(mutations, reference).to_s
   end
 
+  input :organism, :string, "Organism code, no build", "Hsa"
+  input :reference, :string, "Reference code", nil, :jobname => true
+  input :do_vcf, :boolean, "Minimize also the vcfs", false
+  input :bed_file, :file, "Bed file of ranges"
+  extension 'fa.gz'
+  task :sliceref => :binary do |organism,reference,do_vcf,bed_file|
+
+    output = file(reference)
+
+    reference_path = Rbbt.share.organisms[organism][reference]
+    files = reference_path.glob_all("**/*")
+
+    files.each do |file|
+      subpath = file.original.sub(reference_path, '')
+
+      target = output[subpath].find.remove_extension('.gz')
+      type = case file
+             when /\.vcf(?:\.gz)?$/
+               next unless do_vcf
+               HTSBenchmark.slice_vcf(file, target, bed_file)
+
+             when /\.fa(?:sta)?(?:\.gz)?$/
+               HTSBenchmark.slice_fasta(file, target, bed_file)
+             else
+               next
+             end
+
+      CMD.cmd("bgzip #{target}")
+    end
+
+    Open.link output["hg38.fa.gz"], self.tmp_path
+    nil
+  end
 end

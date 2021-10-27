@@ -1,8 +1,10 @@
 module HTSBenchmark
 
-  dep :simulate_tumor_normal, :do_vcf => true
+  dep :simulate_tumor_normal_diploid, :do_vcf => true
   task :bundle_tumor_normal => :array do
-    samples = step(:simulate_tumor_normal)
+    samples = step(:simulate_tumor_normal_diploid)
+
+    neat = step(:NEAT_simulate_DNA)
 
     fastq_dir = file('FASTQ')
     Dir.glob(samples.files_dir + "/*.gz").each do |file|

@@ -1,6 +1,14 @@
 require 'HTSBenchmark/SV'
 module HTSBenchmark
-  def self.slice_fasta(input, output, ranges = {})
+  def self.slice_fasta(input, output, bed_file)
+    ranges = {}
+    TSV.traverse bed_file, :type => :array do |line|
+      chr, start, eend = line.split("\t")
+      start = start.to_i
+      eend = eend.to_i
+      ranges[chr] ||= []
+      ranges[chr] << [start + 1, eend]
+    end
 
     fragments = HTSBenchmark.collect_fragments(input, ranges)
 
@@ -12,7 +20,15 @@ module HTSBenchmark
     end
   end
 
-  def self.slice_vcf(input, output, ranges = {})
+  def self.slice_vcf(input, output, bed_file)
+    ranges = {}
+    TSV.traverse bed_file, :type => :array do |line|
+      chr, start, eend = line.split("\t")
+      start = start.to_i
+      eend = eend.to_i
+      ranges[chr] ||= []
+      ranges[chr] << [start + 1, eend]
+    end
 
     sorted_range_with_offset = {}
     sizes = {}
@@ -29,12 +45,13 @@ module HTSBenchmark
       sorted_range_with_offset[chr] = list_with_offsets
     end
 
-    input = StringIO.new input if String  === input && ! Misc.is_filename?(input)
     Open.open(output, :mode => 'w') do |sout|
       chr = nil
       size = nil
       pointer = nil
-      TSV.traverse input, :type => :array, :bar => true do |line|
+      input = GATK.prepare_VCF(input)
+      selected = CMD.cmd(:tabix, "-h -R #{bed_file} #{input}", :pipe => true)
+      TSV.traverse selected, :type => :array, :bar => true do |line|
         if line[0] == '#'
           if m = line.match(/##contig=<ID=(.*),length=.*/)
             chr = m.captures.first
@@ -59,6 +76,12 @@ module HTSBenchmark
         end
       end
     end
+
+    TmpFile.with_file do |tmp|
+      CMD.cmd("awk '$1 ~ /^#/ {print $0;next} {print $0 | \"sort -k1,1V -k2,2n\"}' #{output} > #{tmp}")
+      Open.mv tmp, output
+    end
+
   end
 
 end

@@ -3,10 +3,17 @@ module HTSBenchmark
   input :evolution, :text, "Evolution"
   input :germline, :array, "Germline mutations"
   task :population_genotypes => :array do |evolution,germline|
-    evolution = YAML.load(evolution)
+    if Step === evolution
+      evolution = evolution.load
+    elsif String === evolution
+      evolution = YAML.load(evolution)
+    else
+      evolution = evolution
+    end
 
     ancestry = {}
     evolution.each_with_index do |info,i|
+      IndiferentHash.setup(info)
       id = info["id"] || "clone-#{i}"
       clone_dir = file("clone_#{i}")
 
@@ -32,8 +39,9 @@ module HTSBenchmark
 
     all_mutations = []
     evolution.each_with_index do |info,i|
+      IndiferentHash.setup(info)
       clone_dir = file("clone_#{i}")
-      next unless info["fraction"].to_f > 0
+      #next unless info["fraction"].to_f > 0
 
       mutations = info["mutations"]
 
@@ -55,7 +63,8 @@ module HTSBenchmark
         all_mutations << [chr, start.to_i, "SV", Misc.digest(values.compact * ":") + ".#{i}-source"] * ":"
         all_mutations << [chr, eend.to_i, "SV", Misc.digest(values.compact * ":") + ".#{i}-source-end"] * ":"
         target_chr = chr if target_chr == 'same' || target_chr == 'cis'
-        all_mutations << [target_chr, target_start.to_i, "SV", Misc.digest(values.compact * ":") + ".#{i}-target"] * ":" if target_start
+        target_start = nil if target_start == ""
+        all_mutations << [target_chr, target_start.to_i, "SV", Misc.digest(values.compact * ":") + ".#{i}-target"] * ":" if target_start 
       end
 
       Open.write(clone_dir.SVs, svs.to_s)
@@ -76,12 +85,12 @@ module HTSBenchmark
         mutation_translations = HTSBenchmark.transpose_mutations(ancestor_svs, all_mutations)
         all_mutations = mutation_translations.values.flatten.uniq
         mutation_translations = HTSBenchmark.transpose_mutations(ancestor_svs, ancestor_mutations)
-        all_mutations += mutation_translations.values.collect{|v| v.shuffle.first }
+        all_mutations += mutation_translations.values.collect{|v| v.shuffle.first }.compact
         all_mutations = all_mutations.uniq
         clone_svs = HTSBenchmark.transpose_SVs(ancestor_svs, clone_svs, false)
 
         germline_mutation_translations = HTSBenchmark.transpose_mutations(ancestor_svs, germline_mutations)
-        germline_mutations += germline_mutation_translations.values.collect{|v| v.shuffle.first }
+        germline_mutations += germline_mutation_translations.values.collect{|v| v.shuffle.first }.compact
       end
 
       all_mutations.uniq!
@@ -108,14 +117,15 @@ module HTSBenchmark
     "HTSBenchmark#miniref_sizes" => :miniref_sizes, 
     :do_vcf => :bundle,
     :jobname => "Default"
-  dep :clone, :germline => :placeholder, :somatic => :placeholder, :reference => :placeholder, :compute => :produce, :depth => 90 do |jobname,options,dependencies|
+  dep :clone, :germline => :placeholder, :somatic => :placeholder, :svs => :placeholder, :reference => :placeholder, :compute => :produce, :depth => 90 do |jobname,options,dependencies|
     normal = dependencies.flatten.select{|dep| dep.task_name === :simulate_normal }.first
     population_genotypes = dependencies.flatten.select{|dep| dep.task_name === :population_genotypes }.first
     germline = dependencies.flatten.select{|dep| dep.task_name === :genotype_germline_hg38 }.first
-    evolution = YAML.load(options[:evolution])
+    evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
 
     clone_jobs = []
     evolution.each_with_index do |info,i|
+      IndiferentHash.setup(info)
       id = info["id"] || "clone-#{i}"
 
       if parent = info["parent"]
@@ -153,8 +163,8 @@ module HTSBenchmark
     end
     clone_jobs
   end
-  dep :merge_clones do |jobname,options,dependencies|
-    evolution = YAML.load(options[:evolution])
+  dep :merge_clones, :clones => :placeholder, :fractions => :placeholder do |jobname,options,dependencies|
+    evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
     samples = dependencies.flatten.compact.select{|d| d.task_name.to_s == 'clone' }
     fractions = evolution.collect{|info| info["fraction"].to_f }
     samples.each do |s| s.init_info end

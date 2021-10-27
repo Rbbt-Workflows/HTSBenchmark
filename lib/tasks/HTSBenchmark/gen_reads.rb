@@ -2,7 +2,6 @@ require 'tools/samtools'
 
 module HTSBenchmark
 
-
   dep :mutations_to_reference
   input :reference, :binary, "Reference file", nil, :nofile => true
   input :depth, :integer, "Sequencing depth to simulate", 60
