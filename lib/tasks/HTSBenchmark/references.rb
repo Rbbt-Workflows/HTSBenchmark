@@ -204,7 +204,7 @@ module HTSBenchmark
   input :organism, :string, "Organism code, no build", "Hsa"
   input :reference, :string, "Reference code", nil, :jobname => true
   input :do_vcf, :boolean, "Minimize also the vcfs", false
-  input :bed_file, :file, "Bed file of ranges"
+  input :bed_file, :file, "Bed file of ranges", nil, :nofile => true
   extension 'fa.gz'
   task :sliceref => :binary do |organism,reference,do_vcf,bed_file|
 
@@ -232,6 +232,14 @@ module HTSBenchmark
     end
 
     Open.link output["hg38.fa.gz"], self.tmp_path
+    nil
+  end
+
+  input :vcf_file, :file, "VCF file to restore"
+  input :bed_file, :file, "Bed file of ranges"
+  extension :vcf
+  task :restore_sliced_vcf => :text do |vcf,bed|
+    HTSBenchmark.restore_sliced_vcf(vcf, self.tmp_path, bed)
     nil
   end
 end

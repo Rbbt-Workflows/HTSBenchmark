@@ -31,19 +31,25 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     simulate_population.rb
 
     bundle.rb
+
+    slice.rb
+
+    texas_sample.rb
+
+    run.rb
    }
   }
  }
  examples=examples filter="*"{
   population=population{
    Files=.files{
+    evolution.yaml
     evolution_SVs.yaml
+    evolution_SVs_haploid.yaml
+    evolution_save.yaml
     evolution_trivial.yaml
     evolution_trivial_SV.yaml
     evolution_trivial_SV_INS.yaml
-    evolution.yaml
-    evolution_SVs_haploid.yaml
-    evolution_save.yaml
    }
   }
   add_SV_to_reference=add_SV_to_reference{
