@@ -3,9 +3,9 @@
   id: founder
   fraction: 0.3
   mutations:
-    - copy-1_chr1:778554:G
-    - copy-1_chr1:778570:G
-    - copy-1_chr1:778637:G
+    - copy-1_chr1:777000:G
+    - copy-1_chr1:778000:G
+    - copy-1_chr1:779000:G
   SVs:
     - - DEL
       - copy-1_chr1

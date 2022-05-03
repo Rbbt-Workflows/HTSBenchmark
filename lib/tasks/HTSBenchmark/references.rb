@@ -2,6 +2,19 @@ require 'HTSBenchmark/miniref'
 require 'HTSBenchmark/sliceref'
 
 module HTSBenchmark
+  def self.haploid_chr(chr, pos, alternatives=%w(copy-1_chr copy-2_chr))
+    return chr if chr =~ /^copy-\d+_/
+    chr = chr.sub(/^chr/,'')
+    num = Misc.digest(chr + ":" << pos.to_s)[-1].hex
+    %w(copy-1_chr copy-2_chr)[num % 2] + chr
+  end
+
+  def self.haploid_mutation(mutation, alternatives=%w(copy-1_chr copy-2_chr))
+    chr, pos, alt = mutation.split(":")
+    chr = haploid_chr(chr, pos, alternatives)
+    [chr, pos, alt] * ":"
+  end
+
   def self.mutation_reference(mutations, reference_file)
     sizes = Samtools.contig_sizes(reference_file)
 
@@ -21,10 +34,7 @@ module HTSBenchmark
       chr, pos, alt = m.split(":")
       chr = chr.sub(/^chr/,'')
 
-      if alternatives = copies[chr]
-        num = Misc.digest([chr, pos] * ":").chars.inject(0){|acc,e| acc += e.hex }
-        chr = alternatives[num % alternatives.length]
-      end
+      chr = haploid_chr(chr, pos, copies[chr]) if copies[chr]
 
       chr = "chr" + chr if sizes[chr].nil? && chr !~ /^(copy|chr)/
       chr = chr.sub(/^chr/,'') if sizes[chr].nil? && chr =~ /^chr/
@@ -60,10 +70,7 @@ module HTSBenchmark
       mutations.each do |mutation|
         chr, pos, alt = mutation.split(":")
 
-        if alternatives = copies[chr]
-          num = Misc.digest([chr, pos] * ":").chars.inject(0){|acc,e| acc += e.hex }
-          chr = alternatives[num % alternatives.length]
-        end
+        chr = haploid_chr(chr, pos, copies[chr]) if copies[chr]
 
         chr = "chr" + chr if sizes[chr].nil? && chr !~ /^(copy|chr)/
         chr = chr.sub(/^chr/,'') if sizes[chr].nil? && chr =~ /^chr/
@@ -91,18 +98,6 @@ module HTSBenchmark
     reference
   end
 
-  def self.haploid_mutation(mutation)
-    chr, pos, alt = mutation.split(":")
-    if chr =~ /^copy-\d/
-      [chr, pos, alt] * ":"
-    else
-      chr = chr.sub(/^chr/,'')
-      num = Misc.digest([chr, pos] * ":").chars.inject(0){|acc,e| acc += e.hex }
-      chr = %w(copy-1_chr copy-2_chr)[num % 2] + chr
-      [chr, pos, alt] * ":"
-    end
-  end
-
   def self.haploid_SV(values)
     type, chr, start, eend, target_chr, target_start, target_end = values
 
@@ -112,7 +107,7 @@ module HTSBenchmark
 
     if !chr.include?('copy-') 
       chr_copies = %w(copy-1_chr copy-2_chr)
-      num = Misc.digest([chr, start, eend, type] * ":").chars.inject(0){|acc,e| acc += e.hex }
+      num = Misc.digest([chr, start, eend, type] * ":")[-1].hex
       chr = chr_copies[num % chr_copies.length] + chr
     end
 
@@ -120,7 +115,7 @@ module HTSBenchmark
 
     if target_chr && ! target_chr.empty? && ! target_chr.include?('copy-')
       chr_copies = %w(copy-1_chr copy-2_chr)
-      num = Misc.digest([chr, start, eend, target_chr, type] * ":").chars.inject(0){|acc,e| acc += e.hex }
+      num = Misc.digest([chr, start, eend, target_chr, type] * ":")[-1].hex
       target_chr = chr_copies[num % chr_copies.length] + target_chr
     end
 
@@ -197,6 +192,7 @@ module HTSBenchmark
   input :mutations, :array, "Mutations to make haploid"
   input :reference, :binary, "Reference file", nil, :nofile => true
   task :mutations_to_reference =>  :tsv do |mutations,reference|
+    reference = reference.path if Step === reference
     reference = Samtools.prepare_FASTA(reference, file('reference'))
     mutation_reference_tsv = HTSBenchmark.mutation_reference(mutations, reference).to_s
   end

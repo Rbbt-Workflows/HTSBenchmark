@@ -233,6 +233,7 @@ require 'tasks/HTSBenchmark/slice'
 require 'tasks/HTSBenchmark/texas_sample'
 require 'tasks/HTSBenchmark/bundle'
 require 'tasks/HTSBenchmark/run'
+require 'tasks/HTSBenchmark/eval_report'
 
 #require 'tasks/simulate/genotypes'
 #require 'tasks/simulate/NEAT'

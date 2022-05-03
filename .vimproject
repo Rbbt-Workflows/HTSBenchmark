@@ -37,6 +37,8 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     texas_sample.rb
 
     run.rb
+
+    eval_report.rb
    }
   }
  }
@@ -45,6 +47,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    Files=.files{
     evolution.yaml
     evolution_SVs.yaml
+    evolution_chr1.yaml
     evolution_SVs_haploid.yaml
     evolution_save.yaml
     evolution_trivial.yaml
@@ -64,6 +67,15 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
  share=share{
   rbbt_commands=rbbt_commands{
    bootstrap
+  }
+ }
+ www=www{
+  views=views{
+   main=main{
+    bundle-IGV.haml
+    population-IGV.haml
+    evolution-IGV.haml
+   }
   }
  }
 }

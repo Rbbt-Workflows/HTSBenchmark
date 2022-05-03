@@ -39,17 +39,23 @@ module HTSBenchmark
     total_mut_fractions = Misc.sum(mut_fractions)
     mut_fractions = mut_fractions.collect{|f| f / total_mut_fractions }
 
+    sv_fractions = sv_fractions.collect{|v| v.to_f}
     total_sv_fractions = Misc.sum(sv_fractions)
-    sv_fractions = sv_fractions.collect{|f| f / total_sv_fractions }
+    sv_fractions = sv_fractions.collect{|f| f / total_sv_fractions } unless total_sv_fractions == 0.0
 
     total_mutations = mutations.length
     total_svs = clean_svs.length
     current_mut = current_sv = 0
     evolution = []
+
     parents.zip(fractions, mut_fractions, sv_fractions).each do |parent,fraction,mut_fraction,sv_fraction|
-      final_sv = current_sv + (total_svs * sv_fraction).ceil
-      csvs = clean_svs[current_sv..final_sv-1]
-      current_sv = final_sv
+      if sv_fraction > 0
+        final_sv = current_sv + (total_svs * sv_fraction).ceil
+        csvs = clean_svs[current_sv..final_sv-1]
+        current_sv = final_sv
+      else
+        csvs = []
+      end
 
       final_mut = current_mut + (total_mutations * mut_fraction).ceil
       cmuts = mutations[current_mut..final_mut-1]
@@ -64,7 +70,8 @@ module HTSBenchmark
   dep :simulate_evolution, :compute => :produce
   dep_task :simulate_population, HTSBenchmark, :population, :evolution => :placeholder do |jobname,options,dependencies|
     simevo = dependencies.flatten.first
-    simevo.run
-    {:inputs => options.merge(:evolution => simevo.load.to_yaml)}
+    simevo.produce
+    evo = simevo.load
+    {:inputs => options.merge(:evolution => evo.to_yaml)}
   end
 end

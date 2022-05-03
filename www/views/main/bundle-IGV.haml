@@ -1,0 +1,70 @@
+%h1 IGV
+= action_parameters do
+  - input :bundle, :string, "Bundle path or key name"
+  - input :variant_caller, :string, "Variant caller to use", :mutect2
+  - input :reference_type, :select, "Reference type", :bundle, :select_options => %w(bundle hg38 b37)
+ 
+- if defined?(bundle) && defined?(variant_caller)
+  - Workflow.require_workflow "Sample"
+  - eval_bundle = HTSBenchmark.job(:eval_bundle, nil, :bundle => bundle, :variant_caller => variant_caller, :reference_type => reference_type)
+  - log :eval_bundle, "Producing bundle evaluation"
+  - Workflow::Orchestrator.process eval_bundle unless eval_bundle.done?
+
+  - normal_bam_job, tumor_bam_job = eval_bundle.rec_dependencies.select{|d| d.task_name == :BAM }
+
+  - raise "Job not done" unless tumor_bam_job.done?
+  - tumor_bam = tumor_bam_job.path
+
+  - if normal_bam_job.done?
+    - normal_bam = normal_bam_job.path
+
+  - reference = tumor_bam_job.recursive_inputs["reference"]
+  - reference = 'hg19' if reference == 'b37'
+
+  %dl
+    %dt tumor_bam
+    %dd= tumor_bam
+    %dt normal_bam
+    %dd= normal_bam
+
+  = tool :IGV_js, :tumor_bam => tumor_bam, :normal_bam => normal_bam, :reference_code => reference, :sample => File.basename(bundle)
+
+  %h3 Results
+  = table do
+    - eval_bundle.load
+
+
+  %h3 False negatives
+  = table do
+    - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/fn.vcf.gz')).run
+
+  %h3 False positives
+  = table do
+    - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/fp.vcf.gz')).run
+
+  %h3 True positives
+  = table do
+    - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/tp.vcf.gz')).run
+  - if eval_bundle.step(:stage_bundle).file('work/truth/evolution.yaml').exist?
+    - evolution = YAML.load eval_bundle.step(:stage_bundle).file('work/truth/evolution.yaml').read
+    %h3 Evolution
+    - require 'rbbt/rest/common/tabs'
+    = tabs do |t|
+      - evolution.each_with_index do |clone,i|
+        - ancestry = []
+        - ancestor = clone
+        - while parent = ancestor[:parent]
+          - ancestry << parent
+          - ancestor = evolution[parent]
+        - t.add "Clone #{i}" do
+          %h5 Parent #{ancestry}
+          %h5 Fraction #{clone[:fraction]}
+          %h5 SVs
+          %ul
+            - clone[:SVs].sort.each do |sv|
+              %li=sv * ":"
+          %h5 Mutations
+          %ul
+            - clone[:mutations].sort.each do |mutation|
+              %li=mutation
+

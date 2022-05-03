@@ -131,25 +131,50 @@ module HTSBenchmark
   task :bundle_population => :array do
     samples = step(:population)
 
-    fastq_dir = file('FASTQ')
-    Dir.glob(samples.files_dir + "/*.gz").each do |file|
-      Open.link file, fastq_dir[File.basename(file)]
+    log :FASTQ, "Preparing FASTQ files"
+
+    fastq_dir = file('WGS/FASTQ')
+    Dir.glob(samples.files_dir + "/tumor_*.gz").each do |file|
+      Open.link file, fastq_dir.tumor[File.basename(file)]
     end
+
+    Dir.glob(samples.files_dir + "/normal_*.gz").each do |file|
+      Open.link file, fastq_dir.normal[File.basename(file)]
+    end
+
+    log :truth_set, "Preparing truth set"
+
+    Open.write file('truth/somatic_mutations.list'), step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,'')
+    Open.link Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/somatic_mutations.list')).recursive_clean.produce.path, file('truth/somatic_mutations_all.vcf')
+    HTSBenchmark.minify_vcf file('truth/somatic_mutations_all.vcf'), file('truth/somatic.vcf'), step(:miniref_sizes).load
+    CMD.cmd_log('gzip', file('truth/somatic.vcf'))
+
+    Open.write file('truth/evolution.yaml'), TSV.get_stream(recursive_inputs[:evolution])
+
+    log :reference, "Preparing reference"
 
     ref_dir = file('reference')
     miniref = step(:miniref)
-    miniref.files.each do |file|
-      Open.link File.join(miniref.files_dir, file), ref_dir[File.basename(file)] 
+    miniref.files_dir.glob("*/*.fa*").each do |file|
+      Open.link file, ref_dir[File.basename(file)] 
     end
 
-    BWA.prepare_FASTA(ref_dir.glob("*.fa.gz").first, ref_dir)
-    Samtools.prepare_FASTA(ref_dir.glob("*.fa.gz").first, ref_dir)
-    GATK.prepare_FASTA(ref_dir.glob("*.fa.gz").first, ref_dir)
+    miniref.files_dir.glob("*/known_sites/*").each do |file|
+      Open.link file, ref_dir.known_sites[File.basename(file)] 
+    end
 
-    ref_dir.glob("*.vcf.gz").each do |vcf|
-      GATK.prepare_VCF(vcf, ref_dir)
+    prepare_FASTA(ref_dir.glob("*.fa.gz").first, ref_dir)
+
+    ref_dir.known_sites.glob("*.vcf.gz").each do |vcf|
+      GATK.prepare_VCF(vcf, ref_dir.known_sites)
     end
 
     Dir.glob(self.files_dir + "**/*")
+  end
+
+  dep :simulate_population, :bundle => true
+  dep_task :bundle_simulate_population, HTSBenchmark, :bundle_population, :evolution => :placeholder do |jobname,options,dependencies|
+    simulate_population = dependencies.flatten.first
+    {:inputs => options.merge("HTSBenchmark#population" => simulate_population, :not_overriden => true), :jobname => jobname}
   end
 end

@@ -1,3 +1,11 @@
+module Sample
+  dep :BAM
+  dep_task :slice_BAM, HTS, :extract_BAM_region_with_mates_samtools, :bam => :BAM
+
+  dep :BAM
+  dep_task :slice_BAM_normal, HTS, :extract_BAM_region_with_mates_samtools, :bam => :BAM_normal
+end
+
 module HTSBenchmark
 
   input :regions_to_slice, :file, "Regions to slice", nil, :required => true, :nofile => true

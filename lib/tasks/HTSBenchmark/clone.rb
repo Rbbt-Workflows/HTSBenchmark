@@ -31,7 +31,7 @@ module HTSBenchmark
 
           skip = nil
           rnd = Random.new 1234
-          TSV.traverse input, :type => :array, :bar => "Processing #{ Misc.fingerprint [clone_step, filename] }" do |line|
+          TSV.traverse input, :type => :array, :bar => "Processing #{ Misc.fingerprint [input, filename] }" do |line|
             if line =~ /^@.*clone_/
               rand = rnd.rand
               skip = rand > fraction 

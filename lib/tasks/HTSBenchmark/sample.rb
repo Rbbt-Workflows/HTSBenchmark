@@ -79,8 +79,6 @@ module HTSBenchmark
     Open.link(normal_bam, file('normal.bam'))
     Open.link(tumor_bam, file('tumor.bam'))
 
-
-
     Dir.glob(files_dir + "/*.fq.gz")
   end
 end

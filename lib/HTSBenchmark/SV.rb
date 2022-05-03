@@ -400,7 +400,7 @@ module HTSBenchmark
       type, chr, start, eend, target_chr, target_start, target_end = values
 
       new_sources = position_translations[id + '-source']
-      next unless new_sources.any?
+      next unless new_sources && new_sources.any?
       new_source = new_sources.shuffle.first.split(":")
       new_targets = position_translations[id + '-target']
       source_diff = new_source.last.to_i + eend.to_i - start.to_i

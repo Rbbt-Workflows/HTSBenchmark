@@ -10,7 +10,7 @@ module HTSBenchmark
     nil
   end
 
-  input :svs, :tsv, "SVs to apply to reference"
+  input :svs, :tsv, "SVs to apply to reference" 
   input :mutations, :array, "Mutations to transpose"
   input :duplicate, :boolean, "Duplicate mutations or choose one", true
   task :SV_mutations => :array do |svs,mutations,duplicate|

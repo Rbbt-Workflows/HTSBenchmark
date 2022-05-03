@@ -2,75 +2,26 @@ require 'tools/samtools'
 
 module HTSBenchmark
 
-  dep :mutations_to_reference
-  input :reference, :binary, "Reference file", nil, :nofile => true
-  input :depth, :integer, "Sequencing depth to simulate", 60
-  input :haploid_reference, :boolean, "Reference is haploid (each chromosome copy separate)"
-  input :sample_name, :string, "Sample name", nil, :jobname => true
-  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :mutations => :skip
-  task :NEAT_simulate_DNA_single => :array do |reference,depth,haploid,sample_name|
-
-    if haploid
-      depth = (depth.to_f / 2).ceil
-    end
-
-    mutations_vcf = file('mutations.vcf')
-    Open.write(mutations_vcf) do |sin|
-      vcf = step(:mutations_to_vcf)
-      #vcf = Sequence.job(:mutations_to_vcf, nil, "Sequence#reference" => step(:mutations_to_reference))
-      #Misc.with_env "RBBT_UPDATE", "TRUE" do
-      #  vcf.clean unless vcf.updated?
-      #end
-      TSV.traverse vcf, :type => :array do |line|
-        l = if line =~ /^(?:##)/ 
-            line
-            elsif line =~ /^#CHR/
-              line + "\t" + "FORMAT" + "\t" + "Sample"
-            else
-              line = "chr" + line unless line =~ /^chr/ || line =~ /^copy/
-              parts = line.split("\t")[0..4]
-
-              parts[4] = parts[4].split(",").first if parts[4]
-
-              (parts + [".", "PASS", ".", "GT", (haploid ? "1|1" : (rand < 0.5 ? "0|1" : "1|0"))]) * "\t"
-            end
-        sin.puts l
-      end
-    end
-
-    output = file('output')
-    reference_gunzip = file('hg38.fa')
-    CMD.cmd(:zcat, "'#{reference}' > #{reference_gunzip}")
-
-    Open.mkdir output
-    CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference_gunzip}' -p 2 -M 0 -R 101 --pe 100 10 -o '#{output[sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
-
-    output.glob("*.fq").each do |file|
-      CMD.cmd("bgzip #{file}")
-    end
-
-    output.glob("*.fq.gz")
-  end
 
   dep :mutations_to_reference
   input :reference, :binary, "Reference file", nil, :nofile => true
   input :depth, :integer, "Sequencing depth to simulate", 60
   input :haploid_reference, :boolean, "Reference is haploid (each chromosome copy separate)"
   input :sample_name, :string, "Sample name", nil, :jobname => true
-  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :mutations => :skip
-  task :NEAT_simulate_DNA => :array do |reference,depth,haploid,sample_name|
+  input :no_errors, :boolean, "Don't simulate sequencing errors", false
+  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :mutations => :skip, :not_overriden => true, :organism => :skip, :positions => :skip
+  task :NEAT_simulate_DNA => :array do |reference,depth,haploid,sample_name,no_errors|
 
     if haploid
       depth = (depth.to_f / 2).ceil
+      ploidy = 2
+    else
+      ploidy = 2
     end
 
     mutations_vcf = file('mutations.vcf')
     Open.write(mutations_vcf) do |sin|
       vcf = step(:mutations_to_vcf)
-      #vcf = Sequence.job(:mutations_to_vcf, nil, "Sequence#reference" => step(:mutations_to_reference))
-      #Misc.with_env "RBBT_UPDATE", "TRUE" do
-      #  vcf.clean unless vcf.updated?
-      #end
       TSV.traverse vcf, :type => :array do |line|
         l = if line =~ /^(?:##)/ 
             line
@@ -98,7 +49,7 @@ module HTSBenchmark
     file = nil
     TSV.traverse io, :type => :array do |line|
 
-      if m = line.match(/>(\w+)/)
+      if m = line.match(/>([^\s]*)/)
         chr = m.captures[0]
         chrs << chr
         file.close if file
@@ -109,12 +60,15 @@ module HTSBenchmark
     end
     file.close
 
-
     cpus = config(:cpus, :genReads, :NEAT, :gen_reads)
-    TSV.traverse chrs, :type => :array, :cpus => cpus, :bar => "Generating reads by chromosome" do |chr|
+    TSV.traverse chrs, :type => :array, :cpus => cpus, :bar => self.progress_bar("Generating reads by chromosome") do |chr|
       Open.mkdir chr_output[chr]
       reference = chr_output[chr].reference
-      CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference}' -p 2 -M 0 -R 101 --pe 100 10 -o '#{chr_output[chr][sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
+      if no_errors
+        CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference}' -E 0 -p #{ploidy} -M 0 -R 126 --pe 300 30 -o '#{chr_output[chr][sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
+      else
+        CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference}' -p #{ploidy} -M 0 -R 126 --pe 300 30 -o '#{chr_output[chr][sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
+      end
     end
 
     
@@ -159,7 +113,57 @@ module HTSBenchmark
     CMD.cmd("bgzip #{output[sample_name] + ".vcf"}")
 
     # Cleanup parts
-    FileUtils.rm_rf chr_output
+    #FileUtils.rm_rf chr_output
+
+    output.glob("*.fq.gz")
+  end
+
+  dep :mutations_to_reference
+  input :reference, :binary, "Reference file", nil, :nofile => true
+  input :depth, :integer, "Sequencing depth to simulate", 60
+  input :haploid_reference, :boolean, "Reference is haploid (each chromosome copy separate)"
+  input :sample_name, :string, "Sample name", nil, :jobname => true
+  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :mutations => :skip, :not_overriden => true, :organism => :skip, :positions => :skip
+  task :NEAT_simulate_DNA_single => :array do |reference,depth,haploid,sample_name|
+
+    if haploid
+      depth = (depth.to_f / 2).ceil
+    end
+
+    mutations_vcf = file('mutations.vcf')
+    Open.write(mutations_vcf) do |sin|
+      vcf = step(:mutations_to_vcf)
+      #vcf = Sequence.job(:mutations_to_vcf, nil, "Sequence#reference" => step(:mutations_to_reference))
+      #Misc.with_env "RBBT_UPDATE", "TRUE" do
+      #  vcf.clean unless vcf.updated?
+      #end
+      TSV.traverse vcf, :type => :array do |line|
+        l = if line =~ /^(?:##)/ 
+            line
+            elsif line =~ /^#CHR/
+              line + "\t" + "FORMAT" + "\t" + "Sample"
+            else
+              line = "chr" + line unless line =~ /^chr/ || line =~ /^copy/
+              parts = line.split("\t")[0..4]
+
+              parts[4] = parts[4].split(",").first if parts[4]
+
+              (parts + [".", "PASS", ".", "GT", (haploid ? "1|1" : (rand < 0.5 ? "0|1" : "1|0"))]) * "\t"
+            end
+        sin.puts l
+      end
+    end
+
+    output = file('output')
+    reference_gunzip = file('hg38.fa')
+    CMD.cmd(:zcat, "'#{reference}' > #{reference_gunzip}")
+
+    Open.mkdir output
+    CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference_gunzip}' -p 2 -M 0 -R 101 --pe 100 10 -o '#{output[sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
+
+    output.glob("*.fq").each do |file|
+      CMD.cmd("bgzip #{file}")
+    end
 
     output.glob("*.fq.gz")
   end

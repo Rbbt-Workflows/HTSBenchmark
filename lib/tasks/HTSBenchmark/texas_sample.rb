@@ -5,10 +5,18 @@ module HTSBenchmark
   TEXAS_SAMPLE_PREFIX_NORMAL = "TCRB-CA.DO262483.SA622770.wgs"
 
   input :regions_to_slice, :file, "Regions to slice", nil, :required => true
-  dep Sample, :slice_BAM, :jobname => TEXAS_SAMPLE, :reference => 'hg38'
-  dep Sample, :slice_BAM_normal, :jobname => TEXAS_SAMPLE, :reference => 'hg38'
-  dep HTS, :revert_BAM, :bam_file => :slice_BAM, :jobname => TEXAS_SAMPLE, :by_group => false
-  dep HTS, :revert_BAM, :bam_file => :slice_BAM_normal, :jobname => TEXAS_SAMPLE + "_normal", :by_group => false
+  dep Sample, :BAM, :jobname => TEXAS_SAMPLE, :reference => "hg38"
+  dep Sample, :BAM_normal, :jobname => TEXAS_SAMPLE, :reference => "hg38"
+  dep HTS, :extract_BAM_region_with_mates_samtools, :bam => :BAM, :bed_file => :regions_to_slice
+  dep HTS, :extract_BAM_region_with_mates_samtools, :bam => :BAM_normal, :bed_file => :regions_to_slice
+  dep HTS, :revert_BAM, :bam_file => :placeholder, :by_group => false do |jobname,options,dependencies|
+    slice = dependencies.flatten.select{|d| d.task_name.to_s == "extract_BAM_region_with_mates_samtools" }.first
+    {:inputs => options.merge({:bam_file => slice })}
+  end
+  dep HTS, :revert_BAM, :bam_file => :placeholder, :by_group => false do |jobname,options,dependencies|
+    slice = dependencies.flatten.select{|d| d.task_name.to_s == "extract_BAM_region_with_mates_samtools" }.last
+    {:inputs => options.merge({:bam_file => slice })}
+  end
   dep HTSBenchmark, :sliceref, :bed_file => :regions_to_slice, :reference => 'hg38', :do_vcf => true
   task :texas_benchmark => :text do
     bam, bam_normal, fastq, fastq_normal, ref = dependencies

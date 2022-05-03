@@ -75,7 +75,7 @@ module HTSBenchmark
   end
 
   dep :genotype_somatic_hg38_lf_chr
-  dep Sequence, :reference, :positions => :genotype_somatic_hg38_lf_chr, :organism => 'Hsa/may2017', :vcf => false, :full_reference_sequence => false
+  dep Sequence, :reference, :positions => :genotype_somatic_hg38_lf_chr, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false
   task :genotype_somatic_hg38 => :array do 
     TSV.traverse step(:reference), :into => :stream do |mutation, reference|
       next if mutation.split(":")[2].split(",").include? reference
