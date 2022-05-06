@@ -142,6 +142,7 @@ module HTSBenchmark
     output = file(reference)
 
     reference_path = Rbbt.share.organisms[organism][reference]
+    reference_path.produce
     files = reference_path.glob_all("**/*")
 
     files.each do |file|

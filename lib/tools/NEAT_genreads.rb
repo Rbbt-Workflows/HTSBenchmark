@@ -11,9 +11,3 @@ module NEATGenreads
   CMD.tool "gen_reads.py", Rbbt.software.opt.NEATGenreads, "gen_reads.py --help"
 
 end
-
-if __FILE__ == $0
-  Log.with_severity 0 do
-    ppp CMD.cmd("genReads.py", "-r #{Rbbt.share.organisms.Hsa.hg38["hg38.fa.gz"].find} ").read
-  end
-end

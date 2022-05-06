@@ -1,4 +1,5 @@
 require 'tools/samtools'
+require 'tools/NEAT_genreads'
 
 module HTSBenchmark
 

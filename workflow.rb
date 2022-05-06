@@ -4,6 +4,7 @@ require 'rbbt/workflow'
 Misc.add_libdir if __FILE__ == $0
 
 Workflow.require_workflow "Sample"
+Workflow.require_workflow "Study"
 Workflow.require_workflow "HTS"
 
 module HTSBenchmark
