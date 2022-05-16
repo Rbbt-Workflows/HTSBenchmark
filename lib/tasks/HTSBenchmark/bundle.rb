@@ -144,10 +144,26 @@ module HTSBenchmark
 
     log :truth_set, "Preparing truth set"
 
-    Open.write file('truth/somatic_mutations.list'), step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,'')
-    Open.link Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/somatic_mutations.list')).recursive_clean.produce.path, file('truth/somatic_mutations_all.vcf')
-    HTSBenchmark.minify_vcf file('truth/somatic_mutations_all.vcf'), file('truth/somatic.vcf'), step(:miniref_sizes).load
-    CMD.cmd_log('gzip', file('truth/somatic.vcf'))
+    HTSBenchmark.minify_mutations step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,''), file('truth/somatic_mutations.list'), step(:miniref_sizes).load
+    vcf_job = Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/somatic_mutations.list'))
+    vcf_job.recursive_clean.produce
+    CMD.cmd_log("gzip #{vcf_job.path } -c > #{file('truth/somatic.vcf.gz')}")
+
+    HTSBenchmark.minify_mutations step(:genotype_germline_hg38).path, file('truth/germline_mutations.list'), step(:miniref_sizes).load
+    vcf_job = Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/germline_mutations.list'))
+    vcf_job.recursive_clean.produce
+    CMD.cmd_log("gzip #{vcf_job.path } -c > #{file('truth/germline.vcf.gz')}")
+
+    #Open.write file('truth/somatic_mutations.list'), step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,'')
+    #Open.link Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/somatic_mutations.list')).recursive_clean.produce.path, file('truth/somatic_mutations_all.vcf')
+    #HTSBenchmark.minify_vcf file('truth/somatic_mutations_all.vcf'), file('truth/somatic.vcf'), step(:miniref_sizes).load
+    #CMD.cmd_log('gzip', file('truth/somatic.vcf'))
+
+    #Open.write file('truth/germline_mutations.list'), step(:genotype_germline_hg38).path.read
+    #Open.link Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/germline_mutations.list')).recursive_clean.produce.path, file('truth/germline_mutations_all.vcf')
+    #HTSBenchmark.minify_vcf file('truth/germline_mutations_all.vcf'), file('truth/germline.vcf'), step(:miniref_sizes).load
+    #CMD.cmd_log('gzip', file('truth/germline.vcf'))
+
 
     Open.write file('truth/evolution.yaml'), TSV.get_stream(recursive_inputs[:evolution])
 

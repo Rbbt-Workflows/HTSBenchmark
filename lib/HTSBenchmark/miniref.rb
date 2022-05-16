@@ -50,6 +50,25 @@ module HTSBenchmark
     end
   end
 
+  def self.minify_mutations(input, output, sizes = {})
+
+    input = StringIO.new input if String  === input && ! Misc.is_filename?(input)
+    Open.open(output, :mode => 'w') do |sout|
+      chr = nil
+      size = nil
+      pointer = nil
+      TSV.traverse input, :type => :array, :bar => true do |line|
+        chr, _sep, position = line.partition(":")
+        chr = chr.sub(/^chr/, '')
+        size = sizes[chr]
+        next if size.nil?
+        position = position.to_i
+        sout.puts line if size > position
+      end
+    end
+  end
+
+
   def self.calculate_sizes(positions, min = 100, padding = 1_000)
     sizes = {}
     TSV.traverse positions, :type => :array, :bar => true do |position|
