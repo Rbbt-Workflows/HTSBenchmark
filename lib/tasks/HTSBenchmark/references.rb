@@ -167,8 +167,10 @@ module HTSBenchmark
   end
 
   dep :miniref
+  input :haploid_chromosomes, :array, "Chromosomes to not duplicate", %w(M X Y)
   extension 'fa.gz'
-  task :miniref_ploidy => :binary do
+  task :miniref_ploidy => :binary do |haploid_chromosomes|
+    haploid_chromosomes = haploid_chromosomes.collect{|c| c.sub('chr', '') }
     sout = Misc.open_pipe do |sin|
       TSV.traverse step(:miniref), :type => :array do |line|
         if line =~ />/
@@ -177,11 +179,19 @@ module HTSBenchmark
           sin.puts line
         end
       end
+
+      skip = false
       TSV.traverse step(:miniref), :type => :array do |line|
         if line =~ />/
-          sin.puts ">copy-2_" + line[1..-1]
+          chr = line[1..-1].split(/\s+/).first.sub('chr', '')
+          if haploid_chromosomes.include?(chr)
+            skip = true
+          else
+            skip = false
+          end
+          sin.puts ">copy-2_" + line[1..-1] unless skip
         else
-          sin.puts line
+          sin.puts line unless skip
         end
       end
     end
