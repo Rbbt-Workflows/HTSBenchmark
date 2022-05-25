@@ -144,7 +144,8 @@ module HTSBenchmark
 
     log :truth_set, "Preparing truth set"
 
-    HTSBenchmark.minify_mutations step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,''), file('truth/somatic_mutations.list'), step(:miniref_sizes).load
+    HTSBenchmark.minify_mutations step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,''), file('truth/somatic_mutations.list.all'), step(:miniref_sizes).load
+    CMD.cmd("grep -v ':SV:' '#{file('truth/somatic_mutations.list.all')}' > '#{file('truth/somatic_mutations.list')}' ")
     vcf_job = Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/somatic_mutations.list'))
     vcf_job.recursive_clean.produce
     CMD.cmd_log("gzip #{vcf_job.path } -c > #{file('truth/somatic.vcf.gz')}")
