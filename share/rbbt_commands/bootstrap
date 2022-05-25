@@ -27,6 +27,6 @@ end
 
 Workflow.require_workflow "HTSBenchmark"
 
-job = HTSBenchmark.job(:bundle_tumor_normal)
+job = HTSBenchmark.job(:simulate_normal)
 job.produce
 

@@ -68,3 +68,9 @@
             - clone[:mutations].sort.each do |mutation|
               %li=mutation
 
+  %h3 Germline
+  %ul
+    - mutations = eval_bundle.step(:stage_bundle).file('work/truth/germline_mutations.list').list
+    - mutations.sort.each do |mutation|
+      %li=mutation
+

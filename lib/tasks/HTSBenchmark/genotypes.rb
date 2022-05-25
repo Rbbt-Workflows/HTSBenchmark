@@ -47,7 +47,35 @@ module HTSBenchmark
   end
 
   #{{{ SOMATIC
-   
+  input :histology, :string, "Histology terms separated by column", "bladder:carcinoma"
+  input :chromosome, :string, "Chromosome to choose from", nil
+  input :max, :integer, "Maximum number of mutations", 20_000_000
+  task :genotype_somatic_hg38_COSMIC => :array do |histology,chr,max|
+    chr = chr.sub('chr', '') if chr
+
+    histology_terms = histology.split(":")
+
+    mutations = TSV.traverse COSMIC["GRCh38"].mutations, 
+      :type => :list, 
+      :fields => [ "Genomic Mutation", "Primary site", "Site subtype 1", "Site subtype 2", "Site subtype 3", "Primary histology", "Histology subtype 1", "Histology subtype 2", "Histology subtype 3" ],
+      :bar => "Selecting mutations for #{histology}",
+      :into => [] do |k,values|
+
+        mutation, *hist = values
+
+        next unless (histology_terms - hist).empty?
+        next if mutation.split(":").last.include?("?")
+        next if chr && mutation.split(":").first.sub('chr','') != chr
+        next if mutation.split(":").first.include? "_"
+
+        mutation
+      end
+
+    mutations = mutations.shuffle[0..max-1] if mutations.length > max
+
+    mutations
+  end
+
   input :study, :string, "PCAWG Study code", "Bladder-TCC"
   input :chromosome, :string, "Chromosome to choose from", nil
   input :max, :integer, "Maximum number of mutations", 20_000_000
@@ -62,24 +90,38 @@ module HTSBenchmark
   end
 
   dep :genotype_somatic_hg19_PCAWG
-  dep_task :genotype_somatic_hg38_lf, Sequence, :lift_over, :positions => :genotype_somatic_hg19_PCAWG, :source => HG19_ORGANISM, :target => HG38_ORGANISM
+  dep_task :genotype_somatic_hg38_PCAWG_lf, Sequence, :lift_over, :positions => :genotype_somatic_hg19_PCAWG, :source => HG19_ORGANISM, :target => HG38_ORGANISM
 
-  dep :genotype_somatic_hg38_lf
-  task :genotype_somatic_hg38_lf_chr => :array do 
+  dep :genotype_somatic_hg38_PCAWG_lf
+  task :genotype_somatic_hg38_PCAWG_lf_chr => :array do 
     chr = recursive_inputs[:chromosome]
-    TSV.traverse step(:genotype_somatic_hg38_lf), :type => :array, :into => :stream do |line|
+    TSV.traverse step(:genotype_somatic_hg38_PCAWG_lf), :type => :array, :into => :stream do |line|
       next if ! line.include?(":") || line.split(":").first.include?("_")
       next if chr && line.split(":").first != chr
       line
     end
   end
 
-  dep :genotype_somatic_hg38_lf_chr
-  dep Sequence, :reference, :positions => :genotype_somatic_hg38_lf_chr, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false
-  task :genotype_somatic_hg38 => :array do 
+  input :somatic_source, :select, "Somatic source", "COSMIC", :select_options => %w(PCAWG COSMIC)
+  dep :genotype_somatic_hg38_PCAWG_lf_chr
+  dep Sequence, :reference, :positions => :genotype_somatic_hg38, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false 
+  task :genotype_somatic_hg38_PCAWG => :array do 
     TSV.traverse step(:reference), :into => :stream do |mutation, reference|
       next if mutation.split(":")[2].split(",").include? reference
       mutation
+    end
+  end
+
+
+  input :somatic_source, :select, "Somatic source", "COSMIC", :select_options => %w(PCAWG COSMIC)
+  dep_task :genotype_somatic_hg38, HTSBenchmark, :genotype_somatic_hg38_COSMIC do |jobname,options|
+    case options[:somatic_source]
+    when "COSMIC"
+      {:inputs => options}
+    when "PCAWG"
+      {:task => :genotype_somatic_hg38_PCAWG, :inputs => options}
+    else
+      raise ParameterException, "Somatic source not understood #{options[:somatic_source]}"
     end
   end
 
@@ -174,7 +216,7 @@ module HTSBenchmark
         end
       end
     end
-    
+
     positions = []
     bps.each do |chr,list|
       positions += list.sort.collect{|p| [chr, p] * ":" } 
@@ -225,7 +267,7 @@ module HTSBenchmark
           target_chr, target_eend = tnpe.split(":")
         end
       end
-      
+
       values = type, chr, start, eend, target_chr, target_start, target_end 
       [id, values]
     end

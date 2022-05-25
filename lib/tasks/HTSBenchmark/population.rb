@@ -120,61 +120,6 @@ module HTSBenchmark
       Open.write(file("clone_#{clone_number}").transposed_SVs, clone_transposed_svs.to_s)
       Open.write(file("clone_#{clone_number}").transposed_germline, clone_transposed_germline * "\n")
 
-
-      #ancestry_mutations = []
-      #ancestry_svs = nil
-      #clone_ancestry.each do |ancestor_number|
-
-      #  ancestor_mutations = TSV.open(file("clone_#{ancestor_number}").mutations)
-      #  ancestor_svs = TSV.open(file("clone_#{ancestor_number}").SVs)
-
-      #  ancestry_mutations += ancestor_mutations
-
-      #  if all_ancestor_svs.nil?
-      #    ancestry_svs = ancestor_svs
-      #  else
-      #    ancestry_svs = ancestor_svs.merge ancestry_svs
-      #    ancestor_svs.annotate(ancestry_svs)
-      #  end
-
-      #  #mutation_translations = HTSBenchmark.transpose_mutations(ancestor_svs, all_mutations)
-      #  #all_mutations = mutation_translations.values.flatten.uniq
-
-      #  #mutation_translations = HTSBenchmark.transpose_mutations(ancestor_svs, ancestor_mutations)
-      #  #all_mutations += mutation_translations.values.collect{|v| v.shuffle.first }.compact
-
-      #  #all_mutations = all_mutations.uniq
-      #  #clone_svs = HTSBenchmark.transpose_SVs(ancestor_svs, clone_svs, false)
-
-      #  #germline_mutation_translations = HTSBenchmark.transpose_mutations(ancestor_svs, germline_mutations)
-      #  #germline_mutations += germline_mutation_translations.values.collect{|v| v.shuffle.first }.compact
-      #  #germline_mutations.uniq!
-      #  
-      #end
-
-      #all_mutations = ancestry_mutations + clone_mutations
-      #transposed_mutations = HTSBenchmark.transpose_mutations(ancestry_svs, all_mutations).values.collect{|v| v.shuffle.first }.compact
-      #transposed_clone_svs = HTSBenchmark.transpose_SVs(ancestry_svs, clone_svs, false).values.collect{|v| v.shuffle.first }.compact
-
-      #all_SVs = ancestry_svs.nil? ? clone_svs : clone_svs.merge(ancestry_svs)
-
-      #Open.write(file("clone_#{clone_number}").all_mutations, all_mutations * "\n")
-      #Open.write(file("clone_#{clone_number}").all_SVs, all_SVs.to_s * "\n")
-
-      #transposed_ancestry_mutations = HTSBenchmark.transpose_mutations(ancestry_svs, ancestry_mutations).values.collect{|v| v.shuffle.first }.compact
-
-      #transposed_mutations = HTSBenchmark.transpose_mutations(ancestry_svs, ancestry_mutations).values.collect{|v| v.shuffle.first }.compact
-
-      #germline_mutation_translations = HTSBenchmark.transpose_mutations(all_ancestor_svs, germline_mutations)
-      #transposed_germline_mutations = germline_mutation_translations.values.collect{|v| v.shuffle.first}.compact
-      #iif clone_germline_mutations
-
-      #all_mutations.uniq!
-
-      #Open.write(file("clone_#{clone_number}").all_mutations, all_mutations * "\n")
-      #Open.write(file("clone_#{clone_number}").germline_mutations, clone_germline_mutations.uniq * "\n")
-      #Open.write(file("clone_#{clone_number}").transposed_SVs, clone_svs.to_s)
-
       bar.tick
     end
     bar.remove
@@ -193,6 +138,7 @@ module HTSBenchmark
   dep :simulate_normal, 
     :mutations => :genotype_germline_hg38, 
     "HTSBenchmark#miniref_sizes" => :miniref_sizes, 
+    "HTSBenchmark#genotype_somatic_hg38" => :genotype_germline_hg38, 
     :not_overriden => true,
     :do_vcf => :bundle,
     :jobname => "Default"
