@@ -68,7 +68,7 @@ module HTSBenchmark
   end
 
   dep :simulate_evolution, :compute => :produce
-  dep_task :simulate_population, HTSBenchmark, :population, :evolution => :placeholder do |jobname,options,dependencies|
+  dep_task :simulate_population, HTSBenchmark, :contaminated_population, :evolution => :placeholder do |jobname,options,dependencies|
     simevo = dependencies.flatten.first
     simevo.produce
     evo = simevo.load

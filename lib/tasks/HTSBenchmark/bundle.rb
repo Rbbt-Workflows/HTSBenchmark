@@ -127,7 +127,7 @@ module HTSBenchmark
     Dir.glob(self.files_dir + "**/*")
   end
 
-  dep :population, :bundle => true
+  dep :contaminated_population, :bundle => true
   task :bundle_population => :array do
     samples = step(:population)
 

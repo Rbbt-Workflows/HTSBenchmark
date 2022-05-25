@@ -128,6 +128,8 @@ module HTSBenchmark
   end
 
   input :bundle, :boolean, "Production run, do VCFs for miniref bundle", false
+  input :tumor_depth, :integer, "Depth to sequence tumor", 90
+  input :normal_depth, :integer, "Depth to sequence normal", 30
   dep :genotype_germline_hg38, :jobname => "Default", :compute => :produce
   dep :population_genotypes, :compute => :produce, :germline => :genotype_germline_hg38
   dep :miniref_sizes, :mutations => :placeholder do |jobname,options,dependencies|
@@ -140,13 +142,15 @@ module HTSBenchmark
     "HTSBenchmark#miniref_sizes" => :miniref_sizes, 
     "HTSBenchmark#genotype_somatic_hg38" => :genotype_germline_hg38, 
     :not_overriden => true,
-    :do_vcf => :bundle,
+    :depth => :normal_depth,
     :jobname => "Default"
-  dep :clone, :germline => :placeholder, :somatic => :placeholder, :svs => :placeholder, :reference => :placeholder, :compute => :produce, :depth => 90 do |jobname,options,dependencies|
+  dep :clone, :germline => :placeholder, :somatic => :placeholder, :svs => :placeholder, :reference => :placeholder, :compute => :produce, :depth => :placeholder do |jobname,options,dependencies|
     normal = dependencies.flatten.select{|dep| dep.task_name === :simulate_normal }.first
     population_genotypes = dependencies.flatten.select{|dep| dep.task_name === :population_genotypes }.first
     germline = dependencies.flatten.select{|dep| dep.task_name === :genotype_germline_hg38 }.first
     evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
+
+    options[:depth] = options[:tumor_depth]
 
     clone_jobs = []
     evolution.each_with_index do |info,i|
@@ -209,6 +213,114 @@ module HTSBenchmark
     Open.link(tr2, file('tumor_read2.fq.gz'))
 
     Dir.glob(files_dir + "/*.fq.gz")
+  end
+
+  input :tumor_depth, :integer, "Depth to sequence tumor", 90
+  input :normal_depth, :integer, "Depth to sequence normal", 30
+  dep :population
+  dep :simulate_normal, 
+    :mutations => :genotype_germline_hg38, 
+    "HTSBenchmark#miniref_sizes" => :miniref_sizes, 
+    "HTSBenchmark#genotype_somatic_hg38" => :genotype_germline_hg38, 
+    :not_overriden => true,
+    :depth => :tumor_depth,
+    :jobname => "Default" 
+  input :normal_in_tumor_contamination, :float, "Proportion of normal contamination in tumor", 0.1
+  input :tumor_in_normal_contamination, :float, "Proportion of tumor contamination in normal", 0
+  task :contaminated_population => :array do |tumor_depth,normal_depth,normal_in_tumor_contamination, tumor_in_normal_contamination|
+    Open.mkdir files_dir
+
+    normal = dependencies.select{|d| d.task_name == :simulate_normal }.first
+    tumor = step(:merge_clones)
+
+    if normal_in_tumor_contamination > 0
+      ['tumor_read1.fq.gz', 'tumor_read2.fq.gz'].each_with_index do |filename,i|
+        output = file(filename)
+
+        clones = [normal, tumor]
+        fractions = [normal_in_tumor_contamination, 1 - normal_in_tumor_contamination]
+
+        sout = Misc.open_pipe false, false do |sin|
+
+          clones.zip(fractions).each_with_index do |v,ci|
+            clone, fraction = v
+            fraction = fraction.to_f
+            clone_step = Step === clone ? clone : Step.new(clone)
+
+            input = clone_step.load[i]
+
+            skip = nil
+            rnd = Random.new 1234
+            TSV.traverse input, :type => :array, :bar => "Processing #{ Misc.fingerprint [input, filename] }" do |line|
+              if line =~ /^@.*(clone|normal)_/
+                rand = rnd.rand
+                skip = rand > fraction 
+                next if skip
+              else
+                next if skip
+              end
+
+              sin.puts line
+            end
+          end
+
+          sin.close
+
+        end
+
+        CMD.cmd(:bgzip, "-c > #{output}", :in => sout)
+      end
+    else
+      ['tumor_read1.fq.gz', 'tumor_read2.fq.gz'].each_with_index do |filename,i|
+        output = file(filename)
+        Open.link tumor.load[i], output
+      end
+    end
+
+    if tumor_in_normal_contamination > 0
+      ['normal_read1.fq.gz', 'normal_read2.fq.gz'].each_with_index do |filename,i|
+        output = file(filename)
+
+        clones = [tumor, normal]
+        fractions = [tumor_in_normal_contamination, (1 - tumor_in_normal_contamination) * (normal_depth.to_f / tumor_depth.to_f)]
+
+        sout = Misc.open_pipe false, false do |sin|
+
+          clones.zip(fractions).each_with_index do |v,ci|
+            clone, fraction = v
+            fraction = fraction.to_f
+            clone_step = Step === clone ? clone : Step.new(clone)
+
+            input = clone_step.load[i]
+
+            skip = nil
+            rnd = Random.new 1234
+            TSV.traverse input, :type => :array, :bar => "Processing #{ Misc.fingerprint [input, filename] }" do |line|
+              if line =~ /^@.*(clone|normal)_/
+                rand = rnd.rand
+                skip = rand > fraction 
+                next if skip
+              else
+                next if skip
+              end
+
+              sin.puts line
+            end
+          end
+
+          sin.close
+
+        end
+
+        CMD.cmd(:bgzip, "-c > #{output}", :in => sout)
+      end
+    else
+      ['normal_read1.fq.gz', 'normal_read2.fq.gz'].each_with_index do |filename,i|
+        output = file(filename)
+        Open.link normal.load[i], output
+      end
+    end
+    Dir.glob(files_dir + "/*")
   end
 
 end
