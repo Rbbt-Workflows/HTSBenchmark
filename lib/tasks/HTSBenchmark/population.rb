@@ -225,19 +225,29 @@ module HTSBenchmark
     :not_overriden => true,
     :depth => :tumor_depth,
     :jobname => "Default" 
+  dep :merge_clones, :clones => :placeholder, :fractions => :placeholder, :invert_selection => true do |jobname,options,dependencies|
+    evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
+    samples = dependencies.collect{|d| d.rec_dependencies}.flatten.uniq.compact.select{|d| d.task_name.to_s == 'clone' }
+    fractions = evolution.collect{|info| (info[:fraction] || info["fraction"]).to_f }
+    samples.each do |s| s.init_info end
+    {:inputs => {:clones => samples, :fractions => fractions } }
+  end
   input :normal_in_tumor_contamination, :float, "Proportion of normal contamination in tumor", 0.1
   input :tumor_in_normal_contamination, :float, "Proportion of tumor contamination in normal", 0
   task :contaminated_population => :array do |tumor_depth,normal_depth,normal_in_tumor_contamination, tumor_in_normal_contamination|
     Open.mkdir files_dir
 
-    normal = dependencies.select{|d| d.task_name == :simulate_normal }.first
-    tumor = step(:merge_clones)
+    original_normal = dependencies.select{|d| d.task_name == :population }.first.step(:simulate_normal)
+    original_tumor = dependencies.select{|d| d.task_name == :population }.first.step(:merge_clones)
+
+    contamination_normal = dependencies.select{|d| d.task_name == :simulate_normal }.first
+    contamination_tumor = dependencies.select{|d| d.task_name == :merge_clones }.first
 
     if normal_in_tumor_contamination > 0
       ['tumor_read1.fq.gz', 'tumor_read2.fq.gz'].each_with_index do |filename,i|
         output = file(filename)
 
-        clones = [normal, tumor]
+        clones = [contamination_normal, original_tumor]
         fractions = [normal_in_tumor_contamination, 1 - normal_in_tumor_contamination]
 
         sout = Misc.open_pipe false, false do |sin|
@@ -247,12 +257,12 @@ module HTSBenchmark
             fraction = fraction.to_f
             clone_step = Step === clone ? clone : Step.new(clone)
 
-            input = clone_step.load[i]
+            input = clone_step.load.sort[i]
 
             skip = nil
             rnd = Random.new 1234
-            TSV.traverse input, :type => :array, :bar => "Processing #{ Misc.fingerprint [input, filename] }" do |line|
-              if line =~ /^@.*(clone|normal)_/
+            TSV.traverse input, :type => :array, :bar => "Processing #{fraction} #{ [clone.short_path, filename] * " => " }" do |line|
+              if line =~ /^@.*(clone|normal)/
                 rand = rnd.rand
                 skip = rand > fraction 
                 next if skip
@@ -273,7 +283,7 @@ module HTSBenchmark
     else
       ['tumor_read1.fq.gz', 'tumor_read2.fq.gz'].each_with_index do |filename,i|
         output = file(filename)
-        Open.link tumor.load[i], output
+        Open.link original_tumor.load.sort[i], output
       end
     end
 
@@ -281,8 +291,8 @@ module HTSBenchmark
       ['normal_read1.fq.gz', 'normal_read2.fq.gz'].each_with_index do |filename,i|
         output = file(filename)
 
-        clones = [tumor, normal]
-        fractions = [tumor_in_normal_contamination, (1 - tumor_in_normal_contamination) * (normal_depth.to_f / tumor_depth.to_f)]
+        clones = [contamination_tumor, original_normal]
+        fractions = [tumor_in_normal_contamination * (normal_depth.to_f / tumor_depth.to_f), (1 - tumor_in_normal_contamination)]
 
         sout = Misc.open_pipe false, false do |sin|
 
@@ -291,12 +301,12 @@ module HTSBenchmark
             fraction = fraction.to_f
             clone_step = Step === clone ? clone : Step.new(clone)
 
-            input = clone_step.load[i]
+            input = clone_step.load.sort[i]
 
             skip = nil
             rnd = Random.new 1234
-            TSV.traverse input, :type => :array, :bar => "Processing #{ Misc.fingerprint [input, filename] }" do |line|
-              if line =~ /^@.*(clone|normal)_/
+            TSV.traverse input, :type => :array, :bar => "Processing #{fraction} #{ [clone.short_path, filename] * " => " }" do |line|
+              if line =~ /^@.*(clone|normal)/
                 rand = rnd.rand
                 skip = rand > fraction 
                 next if skip
@@ -317,7 +327,7 @@ module HTSBenchmark
     else
       ['normal_read1.fq.gz', 'normal_read2.fq.gz'].each_with_index do |filename,i|
         output = file(filename)
-        Open.link normal.load[i], output
+        Open.link normal.load.sort[i], output
       end
     end
     Dir.glob(files_dir + "/*")

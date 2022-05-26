@@ -129,7 +129,7 @@ module HTSBenchmark
 
   dep :contaminated_population, :bundle => true
   task :bundle_population => :array do
-    samples = step(:population)
+    samples = step(:contaminated_population)
 
     log :FASTQ, "Preparing FASTQ files"
 

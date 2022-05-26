@@ -14,7 +14,8 @@ module HTSBenchmark
 
   input :clones, :array, "Array of NEAT job paths", nil, :nofile => true
   input :fractions, :array, "Array of clone cellular fraction", nil, :nofile => true
-  task :merge_clones => :array do |clones, fractions|
+  input :invert_selection, :boolean, "Invert the selection of reads", false
+  task :merge_clones => :array do |clones, fractions,invert_selection|
 
     Open.mkdir files_dir
     ['tumor_read1.fq.gz', 'tumor_read2.fq.gz'].each_with_index do |filename,i|
@@ -25,16 +26,23 @@ module HTSBenchmark
         clones.zip(fractions).each_with_index do |v,ci|
           clone, fraction = v
           fraction = fraction.to_f
+
           clone_step = Step === clone ? clone : Step.new(clone)
 
-          input = clone_step.load[i]
+          input = clone_step.load.sort[i]
 
           skip = nil
           rnd = Random.new 1234
-          TSV.traverse input, :type => :array, :bar => "Processing #{ Misc.fingerprint [input, filename] }" do |line|
+          TSV.traverse input, :type => :array, :bar => "Processing #{fraction}#{invert_selection ? " inverted" : ""} #{ [clone.short_path, filename] * " => " }" do |line|
             if line =~ /^@.*clone_/
               rand = rnd.rand
-              skip = rand > fraction 
+
+              if invert_selection
+                skip = rand < 1.0 - fraction 
+              else
+                skip = rand > fraction 
+              end
+
               next if skip
             else
               next if skip
