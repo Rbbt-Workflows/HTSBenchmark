@@ -33,6 +33,11 @@ module HTSBenchmark
       pos.to_i <= sizes[chr]
     end
 
+    parents = parents.collect{|p| p.to_i }
+    fractions = fractions.collect{|f| f.to_f }
+    mut_fractions = mut_fractions.collect{|f| f.to_f }
+    sv_fractions = sv_fractions.collect{|f| f.to_f }
+    
     total_fractions = Misc.sum(fractions)
     fractions = fractions.collect{|f| f / total_fractions }
 

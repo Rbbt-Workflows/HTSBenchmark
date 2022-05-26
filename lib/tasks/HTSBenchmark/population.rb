@@ -21,6 +21,7 @@ module HTSBenchmark
       if parent = info["parent"]
         if String === parent
           parent_info = evolution.select{|info| info["id"] == parent }.first
+          parent_info ||= evolution[parent.to_i]
         else
           parent_info = evolution[parent]
         end
@@ -144,7 +145,7 @@ module HTSBenchmark
     :not_overriden => true,
     :depth => :normal_depth,
     :jobname => "Default"
-  dep :clone, :germline => :placeholder, :somatic => :placeholder, :svs => :placeholder, :reference => :placeholder, :compute => :produce, :depth => :placeholder do |jobname,options,dependencies|
+  dep :clone, :germline => :placeholder, :somatic => :placeholder, :svs => :placeholder, :reference => :placeholder, :compute => :produce, :depth => :placeholder, :sample_name => :placeholder do |jobname,options,dependencies|
     normal = dependencies.flatten.select{|dep| dep.task_name === :simulate_normal }.first
     population_genotypes = dependencies.flatten.select{|dep| dep.task_name === :population_genotypes }.first
     germline = dependencies.flatten.select{|dep| dep.task_name === :genotype_germline_hg38 }.first
@@ -160,6 +161,7 @@ module HTSBenchmark
       if parent = info["parent"]
         if String === parent
           parent_info = evolution.select{|info| info["id"] == parent }.first
+          parent_info ||= evolution[parent.to_i]
         else
           parent_info = evolution[parent]
         end
@@ -177,6 +179,7 @@ module HTSBenchmark
           :somatic => population_genotypes.file("clone_#{i}").transposed_mutations, 
           :germline => population_genotypes.file("clone_#{i}").transposed_germline, 
           :svs => population_genotypes.file("clone_#{i}").transposed_SVs, 
+          :sample_name => jobname + "-clone_#{i}",
         )
         job = HTSBenchmark.job(:clone, jobname + "-clone_#{i}", clone_options)
       else
@@ -185,6 +188,7 @@ module HTSBenchmark
           :somatic => population_genotypes.file("clone_#{i}").transposed_mutations, 
           :germline => population_genotypes.file("clone_#{i}").transposed_germline, 
           :svs => population_genotypes.file("clone_#{i}").transposed_SVs,
+          :sample_name => jobname + "-clone_#{i}",
         )
         job = HTSBenchmark.job(:clone, jobname + "-clone_#{i}", clone_options)
       end
@@ -192,7 +196,7 @@ module HTSBenchmark
     end
     clone_jobs
   end
-  dep :merge_clones, :clones => :placeholder, :fractions => :placeholder do |jobname,options,dependencies|
+  dep :merge_clones, :clones => :placeholder, :fractions => :placeholder, :invert_selection => false do |jobname,options,dependencies|
     evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
     samples = dependencies.flatten.compact.select{|d| d.task_name.to_s == 'clone' }
     fractions = evolution.collect{|info| (info[:fraction] || info["fraction"]).to_f }
@@ -215,8 +219,6 @@ module HTSBenchmark
     Dir.glob(files_dir + "/*.fq.gz")
   end
 
-  input :tumor_depth, :integer, "Depth to sequence tumor", 90
-  input :normal_depth, :integer, "Depth to sequence normal", 30
   dep :population
   dep :simulate_normal, 
     :mutations => :genotype_germline_hg38, 
@@ -226,6 +228,7 @@ module HTSBenchmark
     :depth => :tumor_depth,
     :jobname => "Default" 
   dep :merge_clones, :clones => :placeholder, :fractions => :placeholder, :invert_selection => true do |jobname,options,dependencies|
+    options[:evolution] = dependencies.flatten.select{|d| d.task_name.to_s == "population"}.first.recursive_inputs[:evolution]
     evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
     samples = dependencies.collect{|d| d.rec_dependencies}.flatten.uniq.compact.select{|d| d.task_name.to_s == 'clone' }
     fractions = evolution.collect{|info| (info[:fraction] || info["fraction"]).to_f }
@@ -234,11 +237,15 @@ module HTSBenchmark
   end
   input :normal_in_tumor_contamination, :float, "Proportion of normal contamination in tumor", 0.1
   input :tumor_in_normal_contamination, :float, "Proportion of tumor contamination in normal", 0
-  task :contaminated_population => :array do |tumor_depth,normal_depth,normal_in_tumor_contamination, tumor_in_normal_contamination|
+  task :contaminated_population => :array do |normal_in_tumor_contamination, tumor_in_normal_contamination|
     Open.mkdir files_dir
 
-    original_normal = dependencies.select{|d| d.task_name == :population }.first.step(:simulate_normal)
-    original_tumor = dependencies.select{|d| d.task_name == :population }.first.step(:merge_clones)
+    population = step(:population)
+    tumor_depth = population.input[:tumor_depth]
+    normal_depth = population.input[:normal_depth]
+
+    original_normal = population.first.step(:simulate_normal)
+    original_tumor = population.first.step(:merge_clones)
 
     contamination_normal = dependencies.select{|d| d.task_name == :simulate_normal }.first
     contamination_tumor = dependencies.select{|d| d.task_name == :merge_clones }.first

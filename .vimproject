@@ -55,6 +55,19 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     evolution_trivial_SV_INS.yaml
    }
   }
+  simulate_population=simulate_population{
+   SV_and_Mut=SV_and_Mut{
+    parents
+    fractions
+    mutation_fractions
+    SV_fractions
+    tumor_in_normal_contamination
+    normal_in_tumor_contamination
+    normal_depth
+    tumor_depth
+    min
+   }
+  }
   add_SV_to_reference=add_SV_to_reference{
    SVs
   }

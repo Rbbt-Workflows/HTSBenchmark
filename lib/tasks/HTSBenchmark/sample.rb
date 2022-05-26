@@ -21,8 +21,8 @@ module HTSBenchmark
   dep :genotype_somatic_hg38, :compute => :produce
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   dep :miniref_ploidy, :sizes => :miniref_sizes, :jobname => 'hg38', :organism => "Hsa"
-  dep_task :simulate_normal, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :genotype_germline_hg38, :haploid_reference => true do |jobname,options|
-    {:inputs => options, :jobname => jobname + "_normal"}
+  dep_task :simulate_normal, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :genotype_germline_hg38, :haploid_reference => true, :sample_name => :placeholder do |jobname,options|
+    {:inputs => options, :jobname => jobname + "_normal", :sample_name => jobname + "_normal"}
   end
 
   dep :simulate_tumor

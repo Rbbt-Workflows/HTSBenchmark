@@ -41,6 +41,8 @@ module HTSBenchmark
   dep Sequence, :reference, :positions => :genotype_germline_hg38_lf_chr, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false
   task :genotype_germline_hg38 => :array do 
     TSV.traverse step(:reference), :into => :stream do |mutation, reference|
+      # Make sure we don't take positions that are now non-mutations, as this
+      # breaks other tools downstream
       next if mutation.split(":")[2].split(",").include? reference
       mutation
     end
