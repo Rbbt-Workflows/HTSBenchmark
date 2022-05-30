@@ -14,6 +14,8 @@ module HTSBenchmark
 
     sizes = step(:miniref_sizes).load
     mutations = step(:genotype_somatic_hg38).load.shuffle
+    mutations = mutations.split("\n")
+    mutations = mutations.shuffle
 
     svs = step(:SV_somatic_hg38_PCAWG).load
 

@@ -110,19 +110,27 @@ module HTSBenchmark
 
   input :study, :string, "PCAWG Study code", "Bladder-TCC"
   input :chromosome, :string, "Chromosome to choose from", nil
-  input :max, :integer, "Maximum number of mutations", 20_000_000
+  input :mutations_per_MB, :integer, "Maximum number of mutations", 20_000_000
   task :genotype_somatic_hg19_PCAWG => :array do |study,chr,max|
 
     reference = HTS.helpers[:reference_file].call('b37')
     reference = GATK.prepare_FASTA reference
     sizes = {}
     reference.replace_extension('dict',true).read.split("\n").each do |line|
-      if m = line.match(/SN:chr(\d+|Y|X|M)\s+LN:(\d+)/)
+      if m = line.match(/SN:(\d+|Y|X|M)\s+LN:(\d+)/)
         sizes[m[1]] = m[2].to_i
       end
     end
 
-    chr = chr.sub('chr', '') if chr
+    if chr
+      chr = chr.sub('chr', '') 
+      size = sizes[chr]
+    else
+      size = Misc.sum(sizes.values)
+    end
+
+    max = size * mutations_per_MB / 1_000_000
+
     Workflow.require_workflow "PCAWG"
     mutations = Study.setup(study).genomic_mutations
     mutations = mutations.select{|mutation| mutation.split(":").first.sub('chr','') == chr}  if chr
