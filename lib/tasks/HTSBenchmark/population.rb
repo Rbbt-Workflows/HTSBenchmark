@@ -128,7 +128,7 @@ module HTSBenchmark
     Dir.glob(files_dir + "/clone_*")
   end
 
-  input :bundle, :boolean, "Production run, do VCFs for miniref bundle", false
+  #input :bundle, :boolean, "Production run, do VCFs for miniref bundle", false
   input :tumor_depth, :integer, "Depth to sequence tumor", 90
   input :normal_depth, :integer, "Depth to sequence normal", 30
   dep :genotype_germline_hg38, :jobname => "Default", :compute => :produce
@@ -226,7 +226,7 @@ module HTSBenchmark
     "HTSBenchmark#genotype_somatic_hg38" => :genotype_germline_hg38, 
     :not_overriden => true,
     :depth => :tumor_depth,
-    :jobname => "Default" 
+    :jobname => "Default"
   dep :merge_clones, :clones => :placeholder, :fractions => :placeholder, :invert_selection => true do |jobname,options,dependencies|
     options[:evolution] = dependencies.flatten.select{|d| d.task_name.to_s == "population"}.first.recursive_inputs[:evolution]
     evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
@@ -236,16 +236,16 @@ module HTSBenchmark
     {:inputs => {:clones => samples, :fractions => fractions } }
   end
   input :normal_in_tumor_contamination, :float, "Proportion of normal contamination in tumor", 0.1
-  input :tumor_in_normal_contamination, :float, "Proportion of tumor contamination in normal", 0
+  input :tumor_in_normal_contamination, :float, "Proportion of tumor contamination in normal", 0.0
   task :contaminated_population => :array do |normal_in_tumor_contamination, tumor_in_normal_contamination|
     Open.mkdir files_dir
 
     population = step(:population)
-    tumor_depth = population.input[:tumor_depth]
-    normal_depth = population.input[:normal_depth]
+    tumor_depth = population.inputs[:tumor_depth]
+    normal_depth = population.inputs[:normal_depth]
 
-    original_normal = population.first.step(:simulate_normal)
-    original_tumor = population.first.step(:merge_clones)
+    original_normal = population.step(:simulate_normal)
+    original_tumor = population.step(:merge_clones)
 
     contamination_normal = dependencies.select{|d| d.task_name == :simulate_normal }.first
     contamination_tumor = dependencies.select{|d| d.task_name == :merge_clones }.first
@@ -268,7 +268,7 @@ module HTSBenchmark
 
             skip = nil
             rnd = Random.new 1234
-            TSV.traverse input, :type => :array, :bar => "Processing #{fraction} #{ [clone.short_path, filename] * " => " }" do |line|
+            TSV.traverse input, :type => :array, :bar => self.progress_bar("Processing #{fraction} #{ [clone.short_path, filename] * " => " }") do |line|
               if line =~ /^@.*(clone|normal)/
                 rand = rnd.rand
                 skip = rand > fraction 
@@ -312,7 +312,7 @@ module HTSBenchmark
 
             skip = nil
             rnd = Random.new 1234
-            TSV.traverse input, :type => :array, :bar => "Processing #{fraction} #{ [clone.short_path, filename] * " => " }" do |line|
+            TSV.traverse input, :type => :array, :bar => self.progress_bar("Processing #{fraction} #{ [clone.short_path, filename] * " => " }") do |line|
               if line =~ /^@.*(clone|normal)/
                 rand = rnd.rand
                 skip = rand > fraction 
@@ -334,7 +334,7 @@ module HTSBenchmark
     else
       ['normal_read1.fq.gz', 'normal_read2.fq.gz'].each_with_index do |filename,i|
         output = file(filename)
-        Open.link normal.load.sort[i], output
+        Open.link original_normal.load.sort[i], output
       end
     end
     Dir.glob(files_dir + "/*")

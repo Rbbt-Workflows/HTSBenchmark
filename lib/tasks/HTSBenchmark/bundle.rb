@@ -127,7 +127,7 @@ module HTSBenchmark
     Dir.glob(self.files_dir + "**/*")
   end
 
-  dep :contaminated_population, :bundle => true
+  dep :contaminated_population
   task :bundle_population => :array do
     samples = step(:contaminated_population)
 
@@ -178,9 +178,9 @@ module HTSBenchmark
     Dir.glob(self.files_dir + "**/*")
   end
 
-  dep :simulate_population, :bundle => true
+  dep :simulate_population
   dep_task :bundle_simulate_population, HTSBenchmark, :bundle_population, :evolution => :placeholder do |jobname,options,dependencies|
-    simulate_population = dependencies.flatten.first
-    {:inputs => options.merge("HTSBenchmark#population" => simulate_population, :not_overriden => true), :jobname => jobname}
+    population = dependencies.flatten.first
+    {:inputs => options.merge("HTSBenchmark#contaminated_population" => population, :not_overriden => true), :jobname => jobname}
   end
 end

@@ -71,6 +71,7 @@ module HTSBenchmark
 
   def self.calculate_sizes(positions, min = 100, padding = 1_000)
     sizes = {}
+    positions = StringIO.new(positions) if String === positions
     TSV.traverse positions, :type => :array, :bar => true do |position|
       chr, _sep, position = position.partition(":")
       chr = chr.sub(/^chr/, '')

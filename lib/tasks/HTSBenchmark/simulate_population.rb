@@ -9,6 +9,7 @@ module HTSBenchmark
   input :SV_fractions, :array, "Array of fractions of SVs assigned to each clone", [0.1,0.2,0.3,0.4,0.5,0.6]
   task :simulate_evolution => :yaml do |parents, fractions, mut_fractions, sv_fractions|
     num_clones = fractions.length
+
     parents = [nil] + parents if parents.length < fractions.length
 
     sizes = step(:miniref_sizes).load
@@ -21,6 +22,7 @@ module HTSBenchmark
       type, chr, start, eend, target_chr, target_start, target_end = values
       target_chr = nil if target_chr.empty?
       target_end = nil if target_end.empty?
+      next if sizes[chr].nil?
       next if sizes[chr] < eend.to_i
       next if target_chr && sizes[target_chr] < target_start.to_i
       next if target_chr && target_end && sizes[target_chr] < target_end.to_i
@@ -33,7 +35,8 @@ module HTSBenchmark
       pos.to_i <= sizes[chr]
     end
 
-    parents = parents.collect{|p| p.to_i }
+    parents = parents.collect{|p| String === p && p =~ /^\d+$/ ?  p.to_i : p }
+
     fractions = fractions.collect{|f| f.to_f }
     mut_fractions = mut_fractions.collect{|f| f.to_f }
     sv_fractions = sv_fractions.collect{|f| f.to_f }
