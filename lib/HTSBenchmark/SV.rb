@@ -422,4 +422,24 @@ module HTSBenchmark
     transposed_svs
   end
 
+  def self.clean_SV_overlaps(svs)
+    svs_new = svs.annotate({})
+    chr_ranges = {}
+    svs.sort_by('Start'){|k,s| s.to_f}.each do |key,values|
+      type, chr, start, eend, *rest = values 
+      start = start.to_i
+      eend = eend.to_i
+      chr_ranges[chr] ||= []
+
+      if chr_ranges[chr].select{|s,e| e > start }.any?
+        next
+      else
+        chr_ranges[chr] << [start,eend] if type == "DEL"
+        svs_new[key] = values
+      end
+
+    end
+    svs_new
+  end
+
 end

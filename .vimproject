@@ -10,6 +10,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
   HTSBenchmark=HTSBenchmark{
    miniref.rb
    sliceref.rb
+   haploid.rb
    SV.rb
   }
 

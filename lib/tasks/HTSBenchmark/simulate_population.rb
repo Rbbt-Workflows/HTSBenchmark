@@ -13,9 +13,8 @@ module HTSBenchmark
     parents = [nil] + parents if parents.length < fractions.length
 
     sizes = step(:miniref_sizes).load
-    mutations = step(:genotype_somatic_hg38).load
-    mutations = mutations.split("\n")
-    mutations = mutations.shuffle
+
+    mutations = step(:genotype_somatic_hg38).load.shuffle
 
     svs = step(:SV_somatic_hg38_PCAWG).load
 

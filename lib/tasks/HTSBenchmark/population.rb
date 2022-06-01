@@ -1,3 +1,5 @@
+require 'HTSBenchmark/haploid'
+
 module HTSBenchmark
 
   input :evolution, :text, "Evolution"
@@ -60,6 +62,8 @@ module HTSBenchmark
         id = Misc.digest(values.compact * ":" + ".#{i}")
         svs[id] = values
       end if info["SVs"]
+
+      svs = HTSBenchmark.clean_SV_overlaps(svs)
 
       svs.each do |id,values|
         type, chr, start, eend, target_chr, target_start, target_end = values

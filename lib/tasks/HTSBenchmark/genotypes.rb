@@ -63,6 +63,7 @@ module HTSBenchmark
 
         mutation, *hist = values
 
+        next unless mutation =~ /^(?:chr)?[0-9MXY]+:\d+:[ACTG\-\+]+$/i
         next unless (histology_terms - hist).empty?
         next if mutation.split(":").last.include?("?")
         next if mutation.split(":").first.include? "_"
@@ -71,19 +72,25 @@ module HTSBenchmark
       end
   end
 
-  dep :genotype_somatic_hg38_COSMIC_histology
-  input :chromosome, :string, "Chromosome to choose from", nil
-  input :mutations_per_MB, :integer, "Density of mutations in mutations per MB", 1_000
-  task :genotype_somatic_hg38_COSMIC => :array do |chr,mutations_per_MB|
-
-    reference = HTS.helpers[:reference_file].call('hg38')
+  helper :chromosome_sizes do |reference_code='hg38'|
+    reference = HTS.helpers[:reference_file].call(reference_code)
     reference = GATK.prepare_FASTA reference
     sizes = {}
     reference.replace_extension('dict',true).read.split("\n").each do |line|
-      if m = line.match(/SN:chr(\d+|Y|X|M)\s+LN:(\d+)/)
+      if m = line.match(/SN:(?:chr)?(\d+|Y|X|M)\s+LN:(\d+)/)
         sizes[m[1]] = m[2].to_i
       end
     end
+
+    sizes
+  end
+
+  dep :genotype_somatic_hg38_COSMIC_histology
+  input :chromosome, :string, "Chromosome to choose from", nil
+  input :mutations_per_MB, :integer, "Density of mutations in mutations per MB", 100
+  task :genotype_somatic_hg38_COSMIC => :array do |chr,mutations_per_MB|
+
+    sizes = chromosome_sizes('hg38')
 
     if chr
       chr = chr.sub('chr', '') 
@@ -101,7 +108,6 @@ module HTSBenchmark
 
     max = size * mutations_per_MB / 1_000_000
 
-    iif max
     mutations = mutations.shuffle[0..max-1] if mutations.length > max
 
     mutations
@@ -110,17 +116,10 @@ module HTSBenchmark
 
   input :study, :string, "PCAWG Study code", "Bladder-TCC"
   input :chromosome, :string, "Chromosome to choose from", nil
-  input :mutations_per_MB, :integer, "Maximum number of mutations", 20_000_000
-  task :genotype_somatic_hg19_PCAWG => :array do |study,chr,max|
+  input :mutations_per_MB, :integer, "Maximum number of mutations per MB", 100
+  task :genotype_somatic_hg19_PCAWG => :array do |study,chr,mutations_per_MB|
 
-    reference = HTS.helpers[:reference_file].call('b37')
-    reference = GATK.prepare_FASTA reference
-    sizes = {}
-    reference.replace_extension('dict',true).read.split("\n").each do |line|
-      if m = line.match(/SN:(\d+|Y|X|M)\s+LN:(\d+)/)
-        sizes[m[1]] = m[2].to_i
-      end
-    end
+    sizes = chromosome_sizes('b37')
 
     if chr
       chr = chr.sub('chr', '') 
@@ -135,7 +134,9 @@ module HTSBenchmark
     mutations = Study.setup(study).genomic_mutations
     mutations = mutations.select{|mutation| mutation.split(":").first.sub('chr','') == chr}  if chr
     mutations = mutations.reject{|mutation| mutation.split(":").first.include? "_"}
+
     mutations = mutations.shuffle[0..max-1] if mutations.length > max
+
     mutations
   end
 
@@ -199,10 +200,21 @@ module HTSBenchmark
 
   input :study, :string, "PCAWG Study code", "Bladder-TCC"
   input :chromosome, :string, "Chromosome to choose from", nil
-  input :max, :integer, "Maximum number of mutations", 20_000_000
-  task :SV_somatic_hg19_PCAWG => :tsv do |study,chr,max|
+  input :svs_per_MB, :float, "Structural variants per MB", 1.0
+  task :SV_somatic_hg19_PCAWG => :tsv do |study,chr,svs_per_MB|
     chr = chr.sub('chr', '') if chr
     Workflow.require_workflow "PCAWG"
+
+    sizes = chromosome_sizes('b37')
+
+    if chr
+      chr.sub('chr', '')
+      size = sizes[chr]
+    else
+      size = Misc.sum(sizes.values)
+    end
+
+    max = size * svs_per_MB / 1_000_000
 
     bps = {}
     types = {}
@@ -265,6 +277,11 @@ module HTSBenchmark
           svs[id] = ["DEL", chr, pos, closest]
         end
       end
+    end
+
+    if svs.length > max
+      good_keys = svs.keys.shuffle[0..max-1]
+      svs = svs.select(good_keys)
     end
 
     positions = []
