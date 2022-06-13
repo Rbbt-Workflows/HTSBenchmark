@@ -12,8 +12,8 @@ module HTSBenchmark
 
   input :organism, :string, "Organism code, no build", "Hsa"
   input :reference, :string, "Reference code", "hg38", :jobname => true
-  input :padding, :integer, "Extra bases to add to reference", 1_000
-  input :do_vcf, :boolean, "Minimize also the vcfs", false
+  input :padding, :integer, "Extra bases to add to reference", 5_000
+  input :do_vcf, :boolean, "Minimize also the vcfs", true
   input :sizes, :tsv, "Sizes of each chromosome's beggining to preserve"
   extension 'fa.gz'
   task :miniref => :binary do |organism,reference,padding,do_vcf,sizes|
@@ -26,8 +26,11 @@ module HTSBenchmark
     reference_path.produce
     files = reference_path.glob_all("**/*")
 
-    files.each do |file|
-      subpath = file.original.sub(reference_path, '')
+    files_info = files.collect{|file| [file, file.original.sub(reference_path, '')] * "<=>" }
+
+    cpus = config :cpus, :miniref, :default => 3
+    TSV.traverse files_info, :type => :array, :bar => self.progress_bar("Minifying reference files"), :cpus => cpus do |file_info|
+      file ,_sep, subpath = file_info.partition("<=>")
 
       target = output[subpath].find.remove_extension('.gz')
       type = case file
@@ -41,6 +44,7 @@ module HTSBenchmark
                next
              end
       CMD.cmd("bgzip #{target}")
+      nil
     end
 
     Open.link output["hg38.fa.gz"], self.tmp_path

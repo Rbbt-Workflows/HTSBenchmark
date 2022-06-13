@@ -403,6 +403,7 @@ module HTSBenchmark
       next unless new_sources && new_sources.any?
       new_source = new_sources.shuffle.first.split(":")
       new_targets = position_translations[id + '-target']
+      next unless new_targets && new_targets.any?
       source_diff = new_source.last.to_i + eend.to_i - start.to_i
       if duplicate
        new_targets.each do |new_target|

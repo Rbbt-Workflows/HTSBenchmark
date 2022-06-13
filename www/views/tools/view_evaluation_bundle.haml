@@ -1,0 +1,134 @@
+
+- require 'HTSBenchmark/annotate'
+- require 'rbbt/rest/common/tabs'
+
+
+- run_bundle = eval_bundle.step(:run_bundle)
+
+- if ! run_bundle.done?
+  - log :run_bundle, "Producing bundle run #{run_bundle.path}"
+  - Workflow::Orchestrator.process run_bundle 
+
+- if ! eval_bundle.done?
+  :ruby
+    log :eval_bundle, "Producing bundle eval #{eval_bundle.path}"
+    begin 
+      eval_bundle.run 
+    rescue
+    end
+
+- log :report, "Producing HTML IGV.js report"
+- normal_bam_job, tumor_bam_job = eval_bundle.rec_dependencies.select{|d| d.task_name == :BAM }
+
+- raise "Job not done" unless tumor_bam_job.done?
+- tumor_bam = tumor_bam_job.path
+
+- if normal_bam_job.done?
+  - normal_bam = normal_bam_job.path
+
+- reference = tumor_bam_job.recursive_inputs["reference"]
+- reference = 'hg19' if reference == 'b37'
+
+%dl
+  %dt tumor_bam
+  %dd= tumor_bam
+  %dt normal_bam
+  %dd= normal_bam
+
+- if defined?(annotate_bam) && annotate_bam
+  - Path.setup(tumor_bam)
+  - Path.setup(normal_bam)
+  - annotated_tumor_bam = @step.file('tumor.annotated.bam')
+  - annotated_normal_bam = @step.file('normal.annotated.bam')
+  - HTSBenchmark.annotate_BAM_with_readnames(tumor_bam, annotated_tumor_bam, @step.progress_bar("Ann Tumor") )
+  - HTSBenchmark.annotate_BAM_with_readnames(normal_bam, annotated_normal_bam, @step.progress_bar("Ann Normal"))
+  - tumor_bam = annotated_tumor_bam
+  - normal_bam = annotated_normal_bam
+  
+= tool :IGV_js, :tumor_bam => tumor_bam, :normal_bam => normal_bam, :reference_code => reference, :sample => File.basename(eval_bundle.recursive_inputs[:bundle])
+
+- somatic_variants = Set.new(eval_bundle.step(:stage_bundle).file('work/truth/somatic_mutations.list').list.collect{|m| m.sub(/^chr/,'') })
+
+- if eval_bundle.done?
+  %h3 Results
+  = table do
+    - eval_bundle.load
+
+  - true_positives = Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/tp.vcf.gz')).run
+
+  = tabs do |t|
+    - t.add "False negatives" do
+      = table do
+        - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/fn.vcf.gz')).run
+
+    - t.add "False positives" do
+      = table do
+        - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/fp.vcf.gz')).run
+
+    - t.add "True positives" do
+      = table do
+        - true_positives
+
+
+- if eval_bundle.step(:stage_bundle).file('work/truth/evolution.yaml').exist?
+  - evolution = YAML.load eval_bundle.step(:stage_bundle).file('work/truth/evolution.yaml').read
+  - evolution.each{|c| IndiferentHash.setup c }
+  - mutation_origin = TSV.setup({}, :key_field => "Genomic Mutation", :fields => ["Clone"], :type => :flat)
+  - clone_vaf = TSV.setup({}, :key_field => "Clone", :fields => ["Mutation clonality"], :type => :single)
+
+  - tabs_section = tabs do |t|
+    - t.active "Clone 0"
+
+    - evolution.each_with_index do |clone,i|
+      - clone_name = "Clone #{i}"
+      - clone_vaf[clone_name] = clone[:fraction].to_f
+
+    - evolution.each_with_index do |clone,i|
+      - ancestry = []
+      - ancestor = clone
+      - while parent = ancestor[:parent]
+        - ancestry << parent
+        - if String === parent
+          - ancestor = evolution.select{|c| c[:id] == parent }.first
+        - else
+          - ancestor = evolution[parent]
+        - clone_vaf["Clone #{evolution.index ancestor}"] += clone[:fraction].to_f
+
+
+      - t.add "Clone #{i}" do
+        %h5 Parent #{ancestry}
+        %h5 Fraction #{clone[:fraction]}
+        %h5 SVs
+        %ul
+          - (clone[:SVs] || []).sort.each do |sv|
+            %li=sv * ":"
+        %h5 Mutations
+        %ul
+          - (clone[:mutations] || []).sort.each do |mutation|
+            - next unless somatic_variants.include? mutation.sub(/copy-\d+_chr/,'')
+            - mutation_origin[mutation.sub(/copy-\d+_chr/, '')] ||= []
+            - mutation_origin[mutation.sub(/copy-\d+_chr/, '')] << "Clone #{i}"
+            %li=mutation
+
+    - t.add "Germline" do
+      %ul
+        - mutations = eval_bundle.step(:stage_bundle).file('work/truth/germline_mutations.list').list
+        - mutations.sort.each do |mutation|
+          %li=mutation
+
+  - mutation_origin = mutation_origin.to_double
+  - mutation_origin.attach clone_vaf.to_list
+  - mutation_origin.process "Mutation clonality" do |v|
+    - Misc.sum(v) 
+
+  - if true_positives
+    - af_field = true_positives.fields.select{|f| f.split(":").last == "AF"}.reject{|f| f.include? "normal" }.first
+    - true_positives.key_field = "Genomic Mutation"
+    - mutation_origin = mutation_origin.attach true_positives, :fields => [af_field] if af_field
+
+  %h3 Predicted and estimated VAF
+  = table do
+    - mutation_origin
+
+  %h3 Evolution
+  = tabs_section

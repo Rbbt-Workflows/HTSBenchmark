@@ -7,30 +7,6 @@
 - if defined?(evolution) && defined?(variant_caller)
   - Workflow.require_workflow "Sample"
   - eval_bundle = HTSBenchmark.job(:eval_population, nil, :evolution => evolution, :variant_caller => variant_caller, :reference_type => reference_type, :contain_stage => false)
-  - log :eval_bundle, "Producing bundle evaluation"
-  - Workflow::Orchestrator.process eval_bundle
 
-  - tumor_bam_job = eval_bundle.step(:BAM)
-  - raise "Job not done" unless tumor_bam_job.done?
-  - tumor_bam = tumor_bam_job.path
+  = tool :view_evaluation_bundle, :eval_bundle => eval_bundle
 
-  - normal_bam_job = eval_bundle.step(:BAM_normal)
-  - if normal_bam_job.done?
-    - normal_bam = normal_bam_job.path
-
-  - reference = tumor_bam_job.recursive_inputs["reference"]
-  - reference = 'hg19' if reference == 'b37'
-
-  = tool :IGV_js, :tumor_bam => tumor_bam, :normal_bam => normal_bam, :reference_code => reference
-
-  %h3 False negatives
-  = table do
-    - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/fn.vcf.gz')).run
-
-  %h3 False positives
-  = table do
-    - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/fp.vcf.gz')).run
-
-  %h3 True positives
-  = table do
-    - Sequence.job(:expanded_vcf, nil, :vcf_file => eval_bundle.file('output/tp.vcf.gz')).run

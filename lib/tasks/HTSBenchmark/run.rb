@@ -26,7 +26,7 @@ module HTSBenchmark
     [study_name, sample_name]
   end
 
-  input :bundle, :file, "Bundle directory", nil, :nofile => true
+  input :bundle, :file, "Bundle directory", nil, :nofile => true, :required => true
   input :input_type, :select, "Input type FASTQ, CRAM, BAM or realign", "FASTQ", :select_options => %w(FASTQ BAM CRAM BAM-re CRAM-re)
   task :stage_bundle => :string do |bundle,input_type|
     work = file('work')
@@ -146,6 +146,9 @@ module HTSBenchmark
 
 
     options[:truth_vcf] = File.join(bundle, 'truth/somatic.vcf.gz')
+
+    options[:bed_regions] = File.join(bundle, 'inputs/regions.bed')
+
     {:inputs => options}
   end
 

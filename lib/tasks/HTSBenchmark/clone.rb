@@ -26,6 +26,8 @@ module HTSBenchmark
         clones.zip(fractions).each_with_index do |v,ci|
           clone, fraction = v
           fraction = fraction.to_f
+          
+          next if fraction == 0.0
 
           clone_step = Step === clone ? clone : Step.new(clone)
 
@@ -33,7 +35,7 @@ module HTSBenchmark
 
           skip = nil
           rnd = Random.new 1234
-          TSV.traverse input, :type => :array, :bar => "Processing #{fraction}#{invert_selection ? " inverted" : ""} #{ [clone.short_path, filename] * " => " }" do |line|
+          TSV.traverse input, :type => :array, :bar => self.progress_bar("Processing #{fraction}#{invert_selection ? " inverted" : ""} #{ [clone.short_path, filename] * " => " }") do |line|
             if line =~ /^@.*clone_/
               rand = rnd.rand
 

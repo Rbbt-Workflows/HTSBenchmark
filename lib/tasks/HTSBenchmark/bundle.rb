@@ -127,7 +127,7 @@ module HTSBenchmark
     Dir.glob(self.files_dir + "**/*")
   end
 
-  dep :contaminated_population, :do_vcf => true
+  dep :contaminated_population
   task :bundle_population => :array do
     samples = step(:contaminated_population)
 
@@ -144,7 +144,28 @@ module HTSBenchmark
 
     log :truth_set, "Preparing truth set"
 
-    HTSBenchmark.minify_mutations step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,''), file('truth/somatic_mutations.list.all'), step(:miniref_sizes).load
+    chr_sizes = step(:miniref_sizes).load
+    Open.open(file('inputs/regions.bed'), :mode => 'w') do |bed|
+      chr_sizes.each do |chr,size|
+        chr = "chr" + chr unless chr.include? 'chr'
+        bed.puts [chr, 0, size ] * "\t" 
+      end
+    end
+
+    inserted_mutations = []
+    self.rec_dependencies.each do |dep|
+      next unless dep.task_name.to_s == 'clone'
+      vcf = dep.step("NEAT_simulate_DNA").file('output').glob("*.vcf.gz").first
+      mutations = Sequence.job(:genomic_mutations, nil, :vcf_file => vcf).recursive_clean.run
+      mutations = mutations.collect{|m| m.sub(/^copy-\d+_/,'') }
+      inserted_mutations.concat mutations
+    end
+
+
+    somatic_mutations = step(:population_genotypes).file('total_mutations').read.gsub(/copy-\d+_/,'').split("\n")
+    somatic_mutations = inserted_mutations & somatic_mutations
+
+    HTSBenchmark.minify_mutations somatic_mutations, file('truth/somatic_mutations.list.all'), step(:miniref_sizes).load
     CMD.cmd("grep -v ':SV:' '#{file('truth/somatic_mutations.list.all')}' > '#{file('truth/somatic_mutations.list')}' ")
     vcf_job = Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/somatic_mutations.list'))
     vcf_job.recursive_clean.produce
@@ -178,7 +199,7 @@ module HTSBenchmark
     Dir.glob(self.files_dir + "**/*")
   end
 
-  dep :simulate_population, :do_vcf => true
+  dep :simulate_population
   dep_task :bundle_simulate_population, HTSBenchmark, :bundle_population, :evolution => :placeholder do |jobname,options,dependencies|
     population = dependencies.flatten.first
     {:inputs => options.merge("HTSBenchmark#contaminated_population" => population, :not_overriden => true), :jobname => jobname}

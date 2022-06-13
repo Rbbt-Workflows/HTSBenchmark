@@ -70,6 +70,7 @@ module HTSBenchmark
 
         mutation
       end
+    CMD.cmd('sort -u', :in => mutations, :pipe => true)
   end
 
   helper :chromosome_sizes do |reference_code='hg38'|
@@ -113,7 +114,6 @@ module HTSBenchmark
     mutations
   end
 
-
   input :study, :string, "PCAWG Study code", "Bladder-TCC"
   input :chromosome, :string, "Chromosome to choose from", nil
   input :mutations_per_MB, :integer, "Maximum number of mutations per MB", 100
@@ -144,7 +144,7 @@ module HTSBenchmark
   dep_task :genotype_somatic_hg38_PCAWG_lf, Sequence, :lift_over, :positions => :genotype_somatic_hg19_PCAWG, :source => HG19_ORGANISM, :target => HG38_ORGANISM
 
   dep :genotype_somatic_hg38_PCAWG_lf
-  task :genotype_somatic_hg38_PCAWG_lf_chr => :array do 
+  task :genotype_somatic_hg38_PCAWG => :array do 
     chr = recursive_inputs[:chromosome]
     TSV.traverse step(:genotype_somatic_hg38_PCAWG_lf), :type => :array, :into => :stream do |line|
       next if ! line.include?(":") || line.split(":").first.include?("_")
@@ -154,18 +154,7 @@ module HTSBenchmark
   end
 
   input :somatic_source, :select, "Somatic source", "COSMIC", :select_options => %w(PCAWG COSMIC)
-  dep :genotype_somatic_hg38_PCAWG_lf_chr
-  dep Sequence, :reference, :positions => :genotype_somatic_hg38, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false 
-  task :genotype_somatic_hg38_PCAWG => :array do 
-    TSV.traverse step(:reference), :into => :stream do |mutation, reference|
-      next if mutation.split(":")[2].split(",").include? reference
-      mutation
-    end
-  end
-
-
-  input :somatic_source, :select, "Somatic source", "COSMIC", :select_options => %w(PCAWG COSMIC)
-  dep_task :genotype_somatic_hg38, HTSBenchmark, :genotype_somatic_hg38_COSMIC do |jobname,options|
+  dep_task :genotype_somatic_hg38_pre_check, HTSBenchmark, :genotype_somatic_hg38_COSMIC do |jobname,options|
     case options[:somatic_source]
     when "COSMIC"
       {:inputs => options}
@@ -173,6 +162,18 @@ module HTSBenchmark
       {:task => :genotype_somatic_hg38_PCAWG, :inputs => options}
     else
       raise ParameterException, "Somatic source not understood #{options[:somatic_source]}"
+    end
+  end
+
+  dep :genotype_germline_hg38
+  dep :genotype_somatic_hg38_pre_check
+  dep Sequence, :reference, :positions => :genotype_somatic_hg38_pre_check, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false 
+  task :genotype_somatic_hg38 => :array do 
+    germline = Set.new step(:genotype_germline_hg38).load
+    TSV.traverse step(:reference), :into => :stream do |mutation, reference|
+      next if mutation.split(":")[2].split(",").include? reference
+      next if germline.include? mutation
+      mutation
     end
   end
 
@@ -244,14 +245,15 @@ module HTSBenchmark
       donor.SV.each do |sv|
         chr, pos, type, chr2, pos2 = sv.split(":")
         pos = pos.to_i
+        pos2 = pos2.to_i
 
         tchr, tpos = target_loc chr, bps, types, total
         bps[tchr] ||= []
         bps[tchr] << tpos.to_i
 
         bps[chr] ||= []
-        bps[chr] << pos.to_i
-        bps[chr] << pos2.to_i
+        bps[chr] << pos
+        bps[chr] << pos2
 
 
         id = Misc.digest([sv, tchr, tpos] * ":")
@@ -335,6 +337,7 @@ module HTSBenchmark
         end
       end
 
+      start, eend = eend, start if start.to_i > eend.to_i
       values = type, chr, start, eend, target_chr, target_start, target_end 
       [id, values]
     end

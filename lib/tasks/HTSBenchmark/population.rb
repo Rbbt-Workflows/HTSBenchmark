@@ -88,6 +88,8 @@ module HTSBenchmark
       clone_mutations = Open.read(file("clone_#{clone_number}").mutations).split("\n")
       clone_ancestry = ancestry[clone_number]
 
+      clone_svs_all = clone_svs.annotate(clone_svs.dup)
+
       ancestry_mutations = []
       clone_transposed_mutations = clone_mutations
       clone_transposed_svs = clone_svs
@@ -96,6 +98,8 @@ module HTSBenchmark
         ancestor_directory = file("clone_#{ancestor_number}")
         ancestor_transposed_svs = ancestor_directory.transposed_SVs.tsv
         ancestor_transposed_mutations = ancestor_directory.transposed_mutations.list
+
+        clone_svs_all.merge!(ancestor_directory.SVs.tsv)
 
         ancestry_mutations = 
           HTSBenchmark.transpose_mutations(ancestor_transposed_svs, ancestry_mutations).
@@ -120,6 +124,8 @@ module HTSBenchmark
       else
         clone_transposed_germline = germline_mutations
       end
+
+      Open.write(file("clone_#{clone_number}").all_SVs, clone_svs_all.to_s)
 
       Open.write(file("clone_#{clone_number}").transposed_mutations, (ancestry_mutations + clone_transposed_mutations) * "\n")
       Open.write(file("clone_#{clone_number}").transposed_SVs, clone_transposed_svs.to_s)
@@ -147,8 +153,7 @@ module HTSBenchmark
     "HTSBenchmark#miniref_sizes" => :miniref_sizes, 
     "HTSBenchmark#genotype_somatic_hg38" => :genotype_germline_hg38, 
     :not_overriden => true,
-    :depth => :normal_depth,
-    :jobname => "Default"
+    :depth => :normal_depth
   dep :clone, :germline => :placeholder, :somatic => :placeholder, :svs => :placeholder, :reference => :placeholder, :compute => :produce, :depth => :placeholder, :sample_name => :placeholder do |jobname,options,dependencies|
     normal = dependencies.flatten.select{|dep| dep.task_name === :simulate_normal }.first
     population_genotypes = dependencies.flatten.select{|dep| dep.task_name === :population_genotypes }.first
@@ -183,7 +188,8 @@ module HTSBenchmark
           :somatic => population_genotypes.file("clone_#{i}").transposed_mutations, 
           :germline => population_genotypes.file("clone_#{i}").transposed_germline, 
           :svs => population_genotypes.file("clone_#{i}").transposed_SVs, 
-          :sample_name => jobname + "-clone_#{i}",
+          :restore_svs => population_genotypes.file("clone_#{i}").all_SVs,
+          :sample_name => "clone_#{i}",
         )
         job = HTSBenchmark.job(:clone, jobname + "-clone_#{i}", clone_options)
       else
@@ -192,7 +198,8 @@ module HTSBenchmark
           :somatic => population_genotypes.file("clone_#{i}").transposed_mutations, 
           :germline => population_genotypes.file("clone_#{i}").transposed_germline, 
           :svs => population_genotypes.file("clone_#{i}").transposed_SVs,
-          :sample_name => jobname + "-clone_#{i}",
+          :restore_svs => population_genotypes.file("clone_#{i}").all_SVs,
+          :sample_name => "clone_#{i}",
         )
         job = HTSBenchmark.job(:clone, jobname + "-clone_#{i}", clone_options)
       end
@@ -205,7 +212,7 @@ module HTSBenchmark
     samples = dependencies.flatten.compact.select{|d| d.task_name.to_s == 'clone' }
     fractions = evolution.collect{|info| (info[:fraction] || info["fraction"]).to_f }
     samples.each do |s| s.init_info end
-    {:inputs => {:clones => samples, :fractions => fractions } }
+    {:inputs => {:clones => samples, :fractions => fractions }, :jobname => jobname }
   end
   task :population => :array do
     Step.wait_for_jobs dependencies
@@ -225,19 +232,25 @@ module HTSBenchmark
 
   dep :population
   dep :simulate_normal, 
-    :mutations => :genotype_germline_hg38, 
-    "HTSBenchmark#miniref_sizes" => :miniref_sizes, 
-    "HTSBenchmark#genotype_somatic_hg38" => :genotype_germline_hg38, 
     :not_overriden => true,
-    :depth => :tumor_depth,
-    :jobname => "Default"
+    :sample_name => 'normal_contamination' do |jobname,options,dependencies|
+      pop = dependencies.flatten.first
+      tumor_depth = pop.inputs[:tumor_depth]
+      options = options.merge(
+        :depth => tumor_depth,
+        :mutations => pop.step(:genotype_germline_hg38),
+        "HTSBenchmark#miniref_sizes" => pop.step(:miniref_sizes), 
+        "HTSBenchmark#genotype_somatic_hg38" => pop.step(:genotype_germline_hg38)
+      )
+      {:inputs => options, :jobname => jobname}
+    end
   dep :merge_clones, :clones => :placeholder, :fractions => :placeholder, :invert_selection => true do |jobname,options,dependencies|
     options[:evolution] = dependencies.flatten.select{|d| d.task_name.to_s == "population"}.first.recursive_inputs[:evolution]
     evolution = Step === options[:evolution] ? options[:evolution].load : YAML.load(options[:evolution])
-    samples = dependencies.collect{|d| d.rec_dependencies}.flatten.uniq.compact.select{|d| d.task_name.to_s == 'clone' }
+    samples = dependencies.flatten.collect{|d| d.rec_dependencies }.flatten.uniq.compact.select{|d| d.task_name.to_s == 'clone' }
     fractions = evolution.collect{|info| (info[:fraction] || info["fraction"]).to_f }
     samples.each do |s| s.init_info end
-    {:inputs => {:clones => samples, :fractions => fractions } }
+    {:inputs => {:clones => samples, :fractions => fractions }, :jobname => jobname }
   end
   input :normal_in_tumor_contamination, :float, "Proportion of normal contamination in tumor", 0.1
   input :tumor_in_normal_contamination, :float, "Proportion of tumor contamination in normal", 0.0
@@ -259,7 +272,7 @@ module HTSBenchmark
         output = file(filename)
 
         clones = [contamination_normal, original_tumor]
-        fractions = [normal_in_tumor_contamination, 1 - normal_in_tumor_contamination]
+        fractions = [normal_in_tumor_contamination, 1.0 - normal_in_tumor_contamination]
 
         sout = Misc.open_pipe false, false do |sin|
 

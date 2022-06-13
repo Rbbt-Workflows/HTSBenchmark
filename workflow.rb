@@ -10,6 +10,10 @@ Workflow.require_workflow "HTS"
 module HTSBenchmark
   extend Workflow
 
+  def self.organism(code="Hsa")
+    [code, "may2017"]*"/"
+  end
+
   #CALLERS = %w(mutect2 strelka varscan_somatic muse somatic_sniper)
 
   #dep HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder do |jobname,options|

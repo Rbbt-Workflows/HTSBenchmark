@@ -5,7 +5,9 @@
   mutations:
     - copy-1_chr1:777000:G
     - copy-1_chr1:778000:G
-    - copy-1_chr1:779000:G
+    - copy-1_chr1:779000:T
+    - copy-1_chr1:900000:T
+    - copy-2_chr1:810000:G
   SVs:
     - - DEL
       - copy-1_chr1

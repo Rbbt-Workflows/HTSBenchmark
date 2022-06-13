@@ -12,6 +12,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    sliceref.rb
    haploid.rb
    SV.rb
+   annotate.rb
   }
 
   tasks=tasks{
@@ -19,6 +20,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     genotypes.rb
     references.rb
 
+    rename_reads.rb
     gen_reads.rb
 
     sample.rb
@@ -48,7 +50,7 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
    Files=.files{
     evolution.yaml
     evolution_SVs.yaml
-    evolution_chr1.yaml
+    evolution_SVs_2.yaml
     evolution_SVs_haploid.yaml
     evolution_save.yaml
     evolution_trivial.yaml
@@ -66,7 +68,6 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     normal_in_tumor_contamination
     normal_depth
     tumor_depth
-    min
    }
   }
   add_SV_to_reference=add_SV_to_reference{
@@ -85,9 +86,14 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
  }
  www=www{
   views=views{
+   tools=tools{
+    view_evaluation_bundle.haml
+   }
    main=main{
     bundle-IGV.haml
     population-IGV.haml
+
+    -- OLD --
     evolution-IGV.haml
    }
   }

@@ -87,7 +87,7 @@ module HTSBenchmark
         next if eend > sizes[chr]
         
         ref = pos_reference[[chr, pos.to_s]]
-        raise mutation if ref.nil?
+        raise mutation if ref.nil? || ref.empty?
         reference[mutation] = ref
       end
     end

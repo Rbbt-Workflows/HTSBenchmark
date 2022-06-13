@@ -8,21 +8,23 @@ module HTSBenchmark
     somatic + germline
   end
 
-  dep :genotype_germline_hg38, :compute => :produce
-  dep :genotype_somatic_hg38, :compute => :produce
+  dep :genotype_germline_hg38, :compute => :produce, :jobname => 'Default'
+  dep :genotype_somatic_hg38, :compute => :produce, :jobname => 'Default'
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   dep :miniref_ploidy, :sizes => :miniref_sizes, :jobname => 'hg38', :organism => "Hsa"
   dep :merge_somatic_germline, :somatic => :genotype_somatic_hg38, :germline => :genotype_germline_hg38
-  dep_task :simulate_tumor, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :merge_somatic_germline, :haploid_reference => true, :depth => 60, :sample_name => :placeholder do |jobname,options|
-    {:inputs => options.merge(:sample_name => jobname + "_tumor"), :jobname => jobname + "_tumor", }
+  dep_task :simulate_tumor, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :merge_somatic_germline, :haploid_reference => true, :depth => 60 do |jobname,options|
+    options = Misc.add_defaults options, :jobname => jobname + "_tumor"
+    {:inputs => options, :jobname => jobname + "_tumor", }
   end
 
-  dep :genotype_germline_hg38, :compute => :produce
-  dep :genotype_somatic_hg38, :compute => :produce
+  dep :genotype_germline_hg38, :compute => :produce, :jobname => 'Default'
+  dep :genotype_somatic_hg38, :compute => :produce, :jobname => 'Default'
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   dep :miniref_ploidy, :sizes => :miniref_sizes, :jobname => 'hg38', :organism => "Hsa"
-  dep_task :simulate_normal, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :genotype_germline_hg38, :haploid_reference => true, :sample_name => :placeholder do |jobname,options|
-    {:inputs => options.merge(:sample_name => jobname + "_normal"), :jobname => jobname + "_normal", }
+  dep_task :simulate_normal, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref_ploidy, :mutations => :genotype_germline_hg38, :haploid_reference => true do |jobname,options|
+    options = Misc.add_defaults options, :jobname => jobname + "_normal"
+    {:inputs => options, :jobname => jobname + "_normal", }
   end
 
   dep :simulate_tumor
@@ -42,8 +44,8 @@ module HTSBenchmark
     Dir.glob(files_dir + "/*.fq.gz")
   end
 
-  dep :genotype_germline_hg38, :compute => :produce
-  dep :genotype_somatic_hg38, :compute => :produce
+  dep :genotype_germline_hg38, :compute => :produce, :jobname => 'Default'
+  dep :genotype_somatic_hg38, :compute => :produce, :jobname => 'Default'
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   dep :miniref, :sizes => :miniref_sizes, :jobname => 'hg38', :organism => "Hsa"
   dep :merge_somatic_germline, :somatic => :genotype_somatic_hg38, :germline => :genotype_germline_hg38
@@ -51,8 +53,8 @@ module HTSBenchmark
     {:inputs => options, :jobname => jobname + "_tumor"}
   end
 
-  dep :genotype_germline_hg38, :compute => :produce
-  dep :genotype_somatic_hg38, :compute => :produce
+  dep :genotype_germline_hg38, :compute => :produce, :jobname => 'Default'
+  dep :genotype_somatic_hg38, :compute => :produce, :jobname => 'Default'
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   dep :miniref, :sizes => :miniref_sizes, :jobname => 'hg38', :organism => "Hsa"
   dep_task :simulate_normal_diploid, HTSBenchmark, :NEAT_simulate_DNA, :reference => :miniref, :mutations => :genotype_germline_hg38, :haploid_reference => false, :depth => 30 do |jobname,options|

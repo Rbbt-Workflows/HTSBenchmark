@@ -4,3 +4,8 @@
   fraction: 1
   mutations:
     - 1:200000:A
+  SVs:
+    - - DEL
+      - copy-1_chr1
+      - 100000
+      - 129000

@@ -1,7 +1,7 @@
 module HTSBenchmark
 
-  dep :genotype_somatic_hg38
-  dep :SV_somatic_hg38_PCAWG
+  dep :genotype_somatic_hg38, :jobname => 'Default'
+  dep :SV_somatic_hg38_PCAWG, :jobname => 'Default'
   dep :miniref_sizes, :mutations => :genotype_somatic_hg38
   input :parents, :array, "Array of clone parents of all clones except founder", [0,0,1,2,3]
   input :fractions, :array, "Array of clone cell fractions in population", [0.1,0.2,0.3,0.4,0.5,0.6]
@@ -80,7 +80,8 @@ module HTSBenchmark
   dep_task :simulate_population, HTSBenchmark, :contaminated_population, :evolution => :placeholder do |jobname,options,dependencies|
     simevo = dependencies.flatten.first
     simevo.produce
-    evo = simevo.load
-    {:inputs => options.merge(:evolution => evo.to_yaml)}
+    simevo.join unless simevo.done?
+    evo = YAML.load Open.open(simevo.path)
+    {:inputs => options.merge(:evolution => evo.to_yaml), :jobname => jobname}
   end
 end
