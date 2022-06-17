@@ -44,6 +44,7 @@ module HTSBenchmark
 
     log :mutations, "Preparing clone mutations"
     all_mutations = []
+    sv_ranges = []
     evolution.each_with_index do |info,i|
       IndiferentHash.setup(info)
       clone_dir = file("clone_#{i}")
@@ -67,6 +68,7 @@ module HTSBenchmark
 
       svs.each do |id,values|
         type, chr, start, eend, target_chr, target_start, target_end = values
+        sv_ranges << [chr.sub(/copy-\d+_/,''), start, eend] * ":"
         all_mutations << [chr, start.to_i, "SV", Misc.digest(values.compact * ":") + ".#{i}-source"] * ":"
         all_mutations << [chr, eend.to_i, "SV", Misc.digest(values.compact * ":") + ".#{i}-source-end"] * ":"
         target_chr = chr if target_chr == 'same' || target_chr == 'cis'
@@ -80,12 +82,17 @@ module HTSBenchmark
     Open.write(file("total_mutations"), all_mutations.compact.uniq * "\n")
     Open.write(file("total_mutations_clean"), all_mutations.uniq.compact.collect{|m| m.sub(/^copy-\d+_chr/, '') } * "\n")
 
+    Open.write(file("SV_ranges"), sv_ranges * "\n")
+
     bar = self.progress_bar("Processing clones", :max => evolution.length)
     bar.init
     evolution.length.times do |clone_number|
 
       clone_svs = TSV.open(file("clone_#{clone_number}").SVs)
       clone_mutations = Open.read(file("clone_#{clone_number}").mutations).split("\n")
+
+      clone_mutations_all = clone_mutations.dup
+
       clone_ancestry = ancestry[clone_number]
 
       clone_svs_all = clone_svs.annotate(clone_svs.dup)
@@ -98,6 +105,8 @@ module HTSBenchmark
         ancestor_directory = file("clone_#{ancestor_number}")
         ancestor_transposed_svs = ancestor_directory.transposed_SVs.tsv
         ancestor_transposed_mutations = ancestor_directory.transposed_mutations.list
+
+        clone_mutations_all.concat ancestor_directory.mutations.list
 
         clone_svs_all.merge!(ancestor_directory.SVs.tsv)
 
@@ -126,6 +135,7 @@ module HTSBenchmark
       end
 
       Open.write(file("clone_#{clone_number}").all_SVs, clone_svs_all.to_s)
+      Open.write(file("clone_#{clone_number}").all_mutations, clone_mutations_all.to_s)
 
       Open.write(file("clone_#{clone_number}").transposed_mutations, (ancestry_mutations + clone_transposed_mutations) * "\n")
       Open.write(file("clone_#{clone_number}").transposed_SVs, clone_transposed_svs.to_s)
