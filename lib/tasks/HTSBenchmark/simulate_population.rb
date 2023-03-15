@@ -1,3 +1,5 @@
+require 'tasks/HTSBenchmark/simulate_population/signatures'
+
 module HTSBenchmark
 
   dep :genotype_somatic_hg38, :jobname => 'Default'
@@ -81,7 +83,6 @@ module HTSBenchmark
     simevo = dependencies.flatten.first
     simevo.produce
     simevo.join unless simevo.done?
-    evo = YAML.load Open.open(simevo.path)
-    {:inputs => options.merge(:evolution => evo.to_yaml), :jobname => jobname}
+    {:inputs => options.merge(:evolution => Open.read(simevo.path)), :jobname => jobname}
   end
 end

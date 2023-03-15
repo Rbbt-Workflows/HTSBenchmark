@@ -12,7 +12,7 @@ module HTSBenchmark
   input :no_errors, :boolean, "Don't simulate sequencing errors", false
   input :rename_reads, :boolean, "Rename reads to include position info", true
   input :restore_svs, :tsv, "SVs to consider when renaming reads", nil, :nofile => true
-  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :mutations => :skip, :not_overriden => true, :organism => :skip, :positions => :skip
+  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :not_overriden => true, :mutations => :skip, :organism => :skip, :positions => :skip
   task :NEAT_simulate_DNA => :array do |reference,depth,haploid,sample_name,no_errors,rename_reads,svs|
 
     if haploid
@@ -146,7 +146,7 @@ module HTSBenchmark
   input :depth, :integer, "Sequencing depth to simulate", 60
   input :haploid_reference, :boolean, "Reference is haploid (each chromosome copy separate)"
   input :sample_name, :string, "Sample name", nil, :jobname => true
-  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :mutations => :skip, :not_overriden => true, :organism => :skip, :positions => :skip
+  dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :not_overriden => true, :mutations => :skip, :organism => :skip, :positions => :skip
   task :NEAT_simulate_DNA_single => :array do |reference,depth,haploid,sample_name|
 
     if haploid

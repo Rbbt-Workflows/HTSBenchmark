@@ -59,7 +59,7 @@ module HTSBenchmark
   end
 
   dep :stage_bundle, :compute => :produce
-  input :workflows, :array, "Workflows to add", ["HTS", "Sequence"]
+  input :add_workflows, :array, "Workflows to add", ["HTS", "Sequence"]
   input :variant_caller, :string, "Caller to run", "mutect2"
   input :reference_type, :select, "Use original reference or bundle", "bundle", :select_options => %w(bundle hg38 b37)
   dep HTS, :BAM, :fastq1 => :placeholder, :fastq2 => :placeholder, :referece => :placeholder do |jobname,options,dependencies|
@@ -68,7 +68,7 @@ module HTSBenchmark
     study_name, sample_name = HTSBenchmark.helpers[:bundle_study_and_sample].call options[:bundle]
 
     Workflow.require_workflow "Sample"
-    workflows = options[:workflows]
+    workflows = options[:add_workflows]
     ref_type = options[:reference_type]
     variant_caller = options[:variant_caller]
     wfs = workflows.collect{|workflow| Workflow.require_workflow workflow }
@@ -93,7 +93,7 @@ module HTSBenchmark
     stage = dependencies.flatten.first
 
     Workflow.require_workflow "Sample"
-    workflows = options[:workflows]
+    workflows = options[:add_workflows]
     ref_type = options[:reference_type]
     variant_caller = options[:variant_caller]
     wfs = workflows.collect{|workflow| Workflow.require_workflow workflow }
@@ -135,6 +135,8 @@ module HTSBenchmark
     else
       Open.link job.path, self.tmp_path
     end
+    Open.link normal.path, file('normal.bam')
+    Open.link tumor.path, file('tumor.bam')
     nil
   end
 

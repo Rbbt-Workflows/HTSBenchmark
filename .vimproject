@@ -34,6 +34,13 @@ HTSBenchmark=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sa
     expression.rb
 
     simulate_population.rb
+    simulate_population=simulate_population{
+     choose_mutations.rb
+
+     signatures.rb
+
+     eval.rb
+    }
 
     bundle.rb
 

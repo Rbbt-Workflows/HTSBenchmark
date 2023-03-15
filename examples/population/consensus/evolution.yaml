@@ -1,0 +1,14 @@
+---
+- 
+  id: founder
+  fraction: 1
+  mutations:
+  SVs:
+    - - DEL
+      - copy-1_chr17
+      - 48727997
+      - 48727999
+    - - DEL
+      - copy-1_chr17
+      - 48728001
+      - 48728002

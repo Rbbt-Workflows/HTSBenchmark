@@ -6,6 +6,7 @@ module HTSBenchmark
     pointer = nil
     fragments = {}
     chr_txt = nil
+    iif input
     TSV.traverse input, :type => :array, :bar => true do |line|
       line = line.chomp
       if line[0] == '>'

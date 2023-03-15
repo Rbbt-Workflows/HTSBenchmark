@@ -88,7 +88,7 @@ module HTSBenchmark
 
   dep :genotype_somatic_hg38_COSMIC_histology
   input :chromosome, :string, "Chromosome to choose from", nil
-  input :mutations_per_MB, :integer, "Density of mutations in mutations per MB", 100
+  input :mutations_per_MB, :float, "Density of mutations in mutations per MB", 100
   task :genotype_somatic_hg38_COSMIC => :array do |chr,mutations_per_MB|
 
     sizes = chromosome_sizes('hg38')
@@ -107,16 +107,18 @@ module HTSBenchmark
       mutations = step(:genotype_somatic_hg38_COSMIC_histology).load
     end
 
-    max = size * mutations_per_MB / 1_000_000
+    if mutations_per_MB && mutations_per_MB > 0
+      max = size * mutations_per_MB / 1_000_000
 
-    mutations = mutations.shuffle[0..max-1] if mutations.length > max
+      mutations = mutations.shuffle[0..max-1] if mutations.length > max
+    end
 
     mutations
   end
 
   input :study, :string, "PCAWG Study code", "Bladder-TCC"
   input :chromosome, :string, "Chromosome to choose from", nil
-  input :mutations_per_MB, :integer, "Maximum number of mutations per MB", 100
+  input :mutations_per_MB, :float, "Maximum number of mutations per MB", 100
   task :genotype_somatic_hg19_PCAWG => :array do |study,chr,mutations_per_MB|
 
     sizes = chromosome_sizes('b37')
@@ -282,7 +284,7 @@ module HTSBenchmark
     end
 
     if svs.length > max
-      good_keys = svs.keys.shuffle[0..max-1]
+      good_keys = max == 0 ? [] : svs.keys.shuffle[0..max-1]
       svs = svs.select(good_keys)
     end
 

@@ -1,0 +1,9 @@
+#: :filename=/home/mvazque2/.rbbt/var/jobs/HTSBenchmark/population_genotypes/simulated_ed4157bcb69b9efd445fe84341367487.files/clone_5/SVs#:type=:list
+#SV ID	Type	Chromosome	Start	End	Target chromosome	Target start	Target end
+cf46ad30bc8e90d4c9350b39ea433a30	INV	copy-1_chr20	442836	444337	copy-2_chr20	444338	0
+c3e7c186f9fb01913266cfa6d1c28c96	DEL	copy-1_chr19	564780	569356		0	0
+2c475dcabd2af9b2f0f3522d3fc8216c	INV	copy-1_chrX	1377706	1378433	copy-1_chrX	1378434	0
+fdd554900a62af346dc4f409a8d8bbef	DEL	copy-1_chr18	1803376	1807442		0	0
+0dff47ff4e73df323cdcd4d541371052	DEL	copy-2_chr21	13202073	13435920		0	0
+2f4f92054487f0830cbea838e00be497	DEL	copy-2_chr21	16318393	17415161		0	0
+613aaf7ff9d96eea4563f9ea9d1fd388	DEL	copy-2_chr13	19028468	19030054		0	0

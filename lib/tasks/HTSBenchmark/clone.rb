@@ -15,7 +15,7 @@ module HTSBenchmark
   input :clones, :array, "Array of NEAT job paths", nil, :nofile => true
   input :fractions, :array, "Array of clone cellular fraction", nil, :nofile => true
   input :invert_selection, :boolean, "Invert the selection of reads", false
-  task :merge_clones => :array do |clones, fractions,invert_selection|
+  task :merge_clones => :array do |clones,fractions,invert_selection|
 
     Open.mkdir files_dir
     ['tumor_read1.fq.gz', 'tumor_read2.fq.gz'].each_with_index do |filename,i|

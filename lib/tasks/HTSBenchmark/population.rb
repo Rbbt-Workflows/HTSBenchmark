@@ -49,7 +49,7 @@ module HTSBenchmark
       IndiferentHash.setup(info)
       clone_dir = file("clone_#{i}")
 
-      mutations = info["mutations"]
+      mutations = info["mutations"] || []
 
       mutations = mutations.collect{|mutation| HTSBenchmark.haploid_mutation(mutation) }
 
@@ -153,7 +153,7 @@ module HTSBenchmark
   input :normal_depth, :integer, "Depth to sequence normal", 30
   dep :genotype_germline_hg38, :jobname => "Default", :compute => :produce
   dep :population_genotypes, :compute => :produce, :germline => :genotype_germline_hg38
-  dep :miniref_sizes, :mutations => :placeholder do |jobname,options,dependencies|
+  dep :miniref_sizes, :mutations => :placeholder, :not_overriden => true do |jobname,options,dependencies|
     population_genotypes = dependencies.select{|d| d.task_name == :population_genotypes }.first
     total = population_genotypes.file('total_mutations_clean')
     {:inputs => options.merge(:mutations => total)}

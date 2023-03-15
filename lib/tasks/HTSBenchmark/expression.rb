@@ -2,6 +2,11 @@ module HTSBenchmark
 
   dep :population_genotypes
   dep Sequence, :transcript_offsets, :compute => :produce, :positions => :placeholder, :organism => HTSBenchmark.organism do |jobname,options,dependencies|
+    mutations = options[:germline]
+    options[:positions] = mutations
+    {:inputs => options}
+  end
+  dep Sequence, :transcript_offsets, :compute => :produce, :positions => :placeholder, :organism => HTSBenchmark.organism do |jobname,options,dependencies|
     mutations = dependencies.flatten.first.file('total_mutations_clean')
     options[:positions] = mutations
     {:inputs => options}
@@ -18,9 +23,13 @@ module HTSBenchmark
   end
   task :expression_consequence => :text do
     Step.wait_for_jobs dependencies
-    pop_job, transcript_offsets_job, genes_partial_job, genes_full_job = dependencies
+    pop_job, transcript_offsets_job_germline, transcript_offsets_job, genes_partial_job, genes_full_job = dependencies
 
+    transcript_offsets_germline = transcript_offsets_job_germline.load
     transcript_offsets = transcript_offsets_job.load
+
+    somatic_mutations = transcript_offsets.keys
+
     genes_partial = genes_partial_job.load
     genes_full = genes_full_job.load
 

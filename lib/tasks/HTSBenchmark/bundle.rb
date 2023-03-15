@@ -166,7 +166,7 @@ module HTSBenchmark
     somatic_mutations = inserted_mutations & somatic_mutations
 
     HTSBenchmark.minify_mutations somatic_mutations, file('truth/somatic_mutations.list.all'), step(:miniref_sizes).load
-    CMD.cmd("grep -v ':SV:' '#{file('truth/somatic_mutations.list.all')}' > '#{file('truth/somatic_mutations.list')}' ")
+    CMD.cmd("grep -v ':SV:' '#{file('truth/somatic_mutations.list.all')}' > '#{file('truth/somatic_mutations.list')}'", :nofail => true)
     vcf_job = Sequence.job(:mutations_to_vcf, nil, :organism => "Hsa/may2017", :positions => file('truth/somatic_mutations.list'))
     vcf_job.recursive_clean.produce
     CMD.cmd_log("gzip #{vcf_job.path } -c > #{file('truth/somatic.vcf.gz')}")
@@ -199,9 +199,26 @@ module HTSBenchmark
     Dir.glob(self.files_dir + "**/*")
   end
 
-  dep :simulate_population
-  dep_task :bundle_simulate_population, HTSBenchmark, :bundle_population, :evolution => :placeholder do |jobname,options,dependencies|
-    population = dependencies.flatten.first
-    {:inputs => options.merge("HTSBenchmark#contaminated_population" => population, :not_overriden => true), :jobname => jobname}
+  #dep :simulate_population
+  #dep_task :bundle_simulate_population_old, HTSBenchmark, :bundle_population, :evolution => :placeholder, :not_overriden => true do |jobname,options,dependencies|
+  #  population = dependencies.flatten.first
+  #  {:inputs => options.merge("HTSBenchmark#contaminated_population" => population), :jobname => jobname}
+  #end
+
+  dep :simulate_evolution
+  dep_task :bundle_simulate_population, HTSBenchmark, :bundle_population, :evolution => :placeholder, :not_overriden => true do |jobname,options,dependencies|
+    simevo = dependencies.flatten.first
+    simevo.produce
+    simevo.join unless simevo.done?
+    {:inputs => options.merge(:evolution => Open.read(simevo.path)), :jobname => jobname}
+  end
+
+
+  dep :simulate_signature_population
+  dep_task :bundle_simulate_signature_population, HTSBenchmark, :bundle_population, :evolution => :placeholder, :not_overriden => true do |jobname,options,dependencies|
+    simevo = dependencies.flatten.first
+    simevo.produce
+    simevo.join unless simevo.done?
+    {:inputs => options.merge(:evolution => Open.read(simevo.path)), :jobname => jobname}
   end
 end
