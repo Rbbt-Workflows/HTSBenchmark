@@ -68,6 +68,7 @@ module HTSBenchmark
 
       parts = name.split("-")
       chr = name.scan(/((?:copy-\d+_)?chr(?:.*?))-/).flatten.first
+      chr ||= parts[1]
 
       id = parts.pop
 
@@ -105,7 +106,7 @@ module HTSBenchmark
       while line = gb_io.gets
         m = line.match(/(.*)-(.*)-(.*)\t/)
         sample, chr, num = m.values_at 1,2,3
-        chr = chr.sub('chr','').to_i
+        #chr = chr.sub('chr','').to_i
         current_chr ||= chr
         if current_chr != chr
           current_chr = chr

@@ -85,7 +85,7 @@ module HTSBenchmark
     nil
   end
 
-  input :mutations, :array, "Mutations to make haploid"
+  input :mutations, :array, "Mutations to make haploid", []
   input :reference, :binary, "Reference file", nil, :nofile => true
   task :mutations_to_reference =>  :tsv do |mutations,reference|
     reference = reference.path if Step === reference

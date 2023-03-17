@@ -6,10 +6,10 @@ module HTSBenchmark
     if Step === bundle
       bundle = bundle.files_dir 
     else
-      bundle = bundle + '.files' if File.exists?(bundle + '.files')
+      bundle = bundle + '.files' if File.exist?(bundle + '.files')
     end
 
-    if File.exists?(bundle) || bundle.include?("/")
+    if File.exist?(bundle) || bundle.include?("/")
       bundle =  Path.setup(bundle)
     else
       bundle = Rbbt.share.data.HTSBenchmark[bundle].find
@@ -189,10 +189,10 @@ module HTSBenchmark
   #  if Step === bundle
   #    bundle = bundle.files_dir 
   #  else
-  #    bundle = bundle + '.files' if File.exists?(bundle + '.files')
+  #    bundle = bundle + '.files' if File.exist?(bundle + '.files')
   #  end
 
-  #  if File.exists?(bundle)
+  #  if File.exist?(bundle)
   #    bundle =  Path.setup(bundle)
   #  else
   #    bundle = Rbbt.share.data.HTSBenchmark[bundle].find

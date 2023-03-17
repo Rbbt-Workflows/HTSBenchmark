@@ -136,7 +136,7 @@ module HTSBenchmark
     CMD.cmd("bgzip #{output[sample_name] + ".vcf"}")
 
     # Cleanup parts
-    #FileUtils.rm_rf chr_output
+    FileUtils.rm_rf chr_output
 
     output.glob("*.fq.gz")
   end

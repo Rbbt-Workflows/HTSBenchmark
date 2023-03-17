@@ -8,13 +8,13 @@ module HTSBenchmark
     dir = File.dirname(file)
 
     alt = file + '.alt'
-    if file.include?("hg38") && ! File.exists?(alt) 
+    if file.include?("hg38") && ! File.exist?(alt) 
       Open.write(alt, '')
     end
 
     Dir.glob(File.join(dir, '*.gz.*')).each do |source|
       target = source.sub('.gz','')
-      next if File.exists?(target)
+      next if File.exist?(target)
       Open.link source, target 
     end
     
@@ -46,7 +46,7 @@ module HTSBenchmark
 
     uncompressed = file.sub('.gz', '')
 
-    if ! File.exists?(uncompressed)
+    if ! File.exist?(uncompressed)
       CMD.cmd("zcat '#{file}' > #{uncompressed}")
     end
 
