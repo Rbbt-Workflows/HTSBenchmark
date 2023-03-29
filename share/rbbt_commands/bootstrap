@@ -25,6 +25,12 @@ if options[:help]
   exit 0
 end
 
+Workflow.require_workflow "Sequence"
+
+job = Sequence.job(:lift_over, "Bootstrap", :positions => ["1:10000:A"], :source => HTSBenchmark::HG19_ORGANISM, :target => HTSBenchmark::HG38_ORGANISM)
+job.produce
+job.recursive_clean
+
 Workflow.require_workflow "HTSBenchmark"
 
 job = HTSBenchmark.job(:simulate_normal)
