@@ -55,6 +55,7 @@ module HTSBenchmark
 
     histology_terms = histology.split(":")
 
+    Workflow.require_workflow "COSMIC"
     mutations = TSV.traverse COSMIC["GRCh38"].mutations, 
       :type => :list, 
       :fields => [ "Genomic Mutation", "Primary site", "Site subtype 1", "Site subtype 2", "Site subtype 3", "Primary histology", "Histology subtype 1", "Histology subtype 2", "Histology subtype 3" ],
