@@ -33,6 +33,7 @@ job.recursive_clean
 
 Workflow.require_workflow "HTSBenchmark"
 
-job = HTSBenchmark.job(:simulate_normal)
+job = HTSBenchmark.job(:simulate_normal, "Bootstrap", :chromosome => "22", :min => 10)
 job.produce
+job.recursive_clean
 
