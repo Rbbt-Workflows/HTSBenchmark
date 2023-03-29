@@ -43,7 +43,7 @@ module HTSBenchmark
              else
                next
              end
-      CMD.cmd("bgzip #{target}")
+      CMD.cmd(:bgzip, target)
       nil
     end
 
@@ -81,7 +81,7 @@ module HTSBenchmark
       end
     end
 
-    CMD.cmd("bgzip -c > #{self.tmp_path}", :in => sout)
+    CMD.cmd(:bgzip,"-c > #{self.tmp_path}", :in => sout)
     nil
   end
 
@@ -120,7 +120,7 @@ module HTSBenchmark
                next
              end
 
-      CMD.cmd("bgzip #{target}")
+      CMD.cmd(:bgzip, target)
     end
 
     Open.link output["hg38.fa.gz"], self.tmp_path

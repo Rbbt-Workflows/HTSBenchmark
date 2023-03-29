@@ -108,19 +108,21 @@ module HTSBenchmark
 
     # Merge FASTQ
     Open.rm fq1
-    chr_output.glob("*/*_read1.fq.gz").each do |file|
-      CMD.cmd("zcat '#{file}' >> '#{fq1}'")
-    end
+    #chr_output.glob("*/*_read1.fq.gz").each do |file|
+      #CMD.cmd("zcat '#{file}' >> '#{fq1}'")
+    #end
+    CMD.cmd("zcat '#{chr_output}'/*/*_read1.fq.gz >> '#{fq1}'")
     
     Open.rm fq2
-    chr_output.glob("*/*_read2.fq.gz").each do |file|
-      CMD.cmd("zcat '#{file}' >> '#{fq2}'")
-    end
+    #chr_output.glob("*/*_read2.fq.gz").each do |file|
+    #  CMD.cmd("zcat '#{file}' >> '#{fq2}'")
+    #end
+    CMD.cmd("zcat '#{chr_output}'/*/*_read2.fq.gz >> '#{fq2}'")
 
     # Rename reads
     if rename_reads
-      tmp1 = file('tmp1.fa.gz')
-      tmp2 = file('tmp2.fa.gz')
+      tmp1 = file('tmp1.fq.gz')
+      tmp2 = file('tmp2.fq.gz')
       HTSBenchmark.rename_FASTQ_reads(bam, fq1, fq2, tmp1, tmp2, svs, self.progress_bar("Adding position info to reads"))
       Open.mv tmp1, fq1
       Open.mv tmp2, fq2
@@ -128,12 +130,12 @@ module HTSBenchmark
       Open.mv fq2, fq2 + '.gz'
     else
       output.glob("*.fq").each do |file|
-        CMD.cmd("bgzip '#{file}'")
+        CMD.cmd("gzip '#{file}'")
       end
     end
 
 
-    CMD.cmd("bgzip #{output[sample_name] + ".vcf"}")
+    CMD.cmd(:bgzip, output[sample_name] + ".vcf")
 
     # Cleanup parts
     FileUtils.rm_rf chr_output
@@ -185,7 +187,7 @@ module HTSBenchmark
     CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference_gunzip}' -p 2 -M 0 -R 101 --pe 100 10 -o '#{output[sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
 
     output.glob("*.fq").each do |file|
-      CMD.cmd("bgzip #{file}")
+      CMD.cmd(:bgzip, file)
     end
 
     output.glob("*.fq.gz")

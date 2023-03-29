@@ -77,7 +77,7 @@ module HTSBenchmark
 
     truth_dir.glob("*.vcf").each do |f| 
       CMD.cmd("sed -i 's/WP=0$/WP=0\\/1/;s/WP=1$/WP=1\\/0/' '#{f}'")
-      CMD.cmd("bgzip '#{f}'")
+      CMD.cmd(:bgzip, f)
       Open.mv f + '.gz', truth_dir['somatic.vcf.gz']
       GATK.prepare_VCF(truth_dir["somatic.vcf.gz"], truth_dir) 
     end

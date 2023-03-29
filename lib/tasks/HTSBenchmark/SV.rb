@@ -6,7 +6,7 @@ module HTSBenchmark
   input :svs, :tsv, "SVs to apply to reference"
   extension 'fa.gz'
   task :SV_reference => :binary do |reference,svs|
-    CMD.cmd("bgzip > #{self.tmp_path}", :in => HTSBenchmark.apply_SVs_reference(reference, svs))
+    CMD.cmd(:bgzip, "> #{self.tmp_path}", :in => HTSBenchmark.apply_SVs_reference(reference, svs))
     nil
   end
 
