@@ -12,8 +12,9 @@ module HTSBenchmark
   input :no_errors, :boolean, "Don't simulate sequencing errors", false
   input :rename_reads, :boolean, "Rename reads to include position info", true
   input :restore_svs, :tsv, "SVs to consider when renaming reads", nil, :nofile => true
+  input :error_rate, :float, "Error rate to rescale the error mode to have it as mean", nil
   dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :not_overriden => true, :mutations => :skip, :organism => :skip, :positions => :skip
-  task :NEAT_simulate_DNA => :array do |reference,depth,haploid,sample_name,no_errors,rename_reads,svs|
+  task :NEAT_simulate_DNA => :array do |reference,depth,haploid,sample_name,no_errors,rename_reads,svs,error_rate|
 
     if haploid
       depth = (depth.to_f / 2).ceil
@@ -75,6 +76,8 @@ module HTSBenchmark
       reference = chr_output[chr].reference
       if no_errors
         CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference}' -E 0 -p #{ploidy} -M 0 -R 126 --pe 300 30 -o '#{chr_output[chr][sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
+      elsif error_rate
+        CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference}' -E #{error_rate} -p #{ploidy} -M 0 -R 126 --pe 300 30 -o '#{chr_output[chr][sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
       else
         CMD.cmd_log("gen_reads.py", "-c #{depth} -r '#{reference}' -p #{ploidy} -M 0 -R 126 --pe 300 30 -o '#{chr_output[chr][sample_name]}' -v '#{mutations_vcf}' --vcf --bam")
       end
