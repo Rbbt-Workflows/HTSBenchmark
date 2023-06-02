@@ -12,8 +12,8 @@ module HTSBenchmark
   input :no_errors, :boolean, "Don't simulate sequencing errors", false
   input :rename_reads, :boolean, "Rename reads to include position info", true
   input :restore_svs, :tsv, "SVs to consider when renaming reads", nil, :nofile => true
-  input :error_rate, :float, "Error rate to rescale the error mode to have it as mean", nil
-  input :read_length, :integer, "Read length to simulate", nil
+  input :error_rate, :float, "Error rate to rescale the error mode to have it as mean", -1
+  input :read_length, :integer, "Read length to simulate", 126
   dep Sequence, :mutations_to_vcf, "Sequence#reference" => :mutations_to_reference, :not_overriden => true, :mutations => :skip, :organism => :skip, :positions => :skip
   task :NEAT_simulate_DNA => :array do |reference,depth,haploid,sample_name,no_errors,rename_reads,svs,error_rate,read_length|
 
@@ -108,7 +108,10 @@ module HTSBenchmark
     # Merge BAM
     bam_parts = chr_output.glob("*/*.bam")
 
-    CMD.cmd(:samtools, "merge -f '#{bam}' #{bam_parts * " "}")
+    Misc.in_dir chr_output do
+      relative_bam_parts = bam_parts.collect{|p| "'" + Misc.path_relative_to(chr_output, p) + "'" }
+      CMD.cmd(:samtools, "merge -f '#{bam}' #{relative_bam_parts * " "}")
+    end
 
     # Merge FASTQ
     Open.rm fq1
