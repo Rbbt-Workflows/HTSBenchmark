@@ -1,34 +1,46 @@
 module HTSBenchmark
 
-  dep :population_genotypes
-  dep Sequence, :transcript_offsets, :compute => :produce, :positions => :placeholder, :organism => HTSBenchmark.organism do |jobname,options,dependencies|
-    mutations = options[:germline]
+  dep :genotype_germline_hg38
+  dep_task :germline_transcript_offsets, Sequence, :transcript_offsets, :compute => :produce, :positions => :genotype_germline_hg38, :organism => HTSBenchmark.organism, :vcf => false
+
+  dep :genotype_germline_hg38
+  dep :population_genotypes, :germline => :genotype_germline_hg38
+  dep_task :somatic_transcript_offsets, Sequence, :transcript_offsets, :compute => :produce, :positions => :placeholder, :organism => HTSBenchmark.organism, :vcf => false do |jobname,options,dependencies|
+    mutations = dependencies.flatten.last.file('total_mutations_clean')
     options[:positions] = mutations
     {:inputs => options}
   end
-  dep Sequence, :transcript_offsets, :compute => :produce, :positions => :placeholder, :organism => HTSBenchmark.organism do |jobname,options,dependencies|
-    mutations = dependencies.flatten.first.file('total_mutations_clean')
-    options[:positions] = mutations
-    {:inputs => options}
-  end
-  dep Sequence, :genes_at_ranges, :compute => :produce, :ranges => :placeholder, :organism => HTSBenchmark.organism do |jobname,options,dependencies|
-    ranges = dependencies.flatten.first.file('SV_ranges')
+
+  dep :genotype_germline_hg38
+  dep :population_genotypes, :germline => :genotype_germline_hg38
+  dep_task :SV_partial_genes, Sequence, :genes_at_ranges, :compute => :produce, :ranges => :placeholder, :organism => HTSBenchmark.organism, :full_overlap => false do |jobname,options,dependencies|
+    ranges = dependencies.flatten.last.file('SV_ranges')
     options[:ranges] = ranges
     {:inputs => options}
   end
-  dep Sequence, :genes_at_ranges, :compute => :produce, :ranges => :placeholder, :full_overlap => true, :organism => HTSBenchmark.organism do |jobname,options,dependencies|
-    ranges = dependencies.flatten.first.file('SV_ranges')
+
+  dep :genotype_germline_hg38
+  dep :population_genotypes, :germline => :genotype_germline_hg38
+  dep_task :SV_full_genes, Sequence, :genes_at_ranges, :compute => :produce, :ranges => :placeholder, :organism => HTSBenchmark.organism, :full_overlap => true do |jobname,options,dependencies|
+    ranges = dependencies.flatten.last.file('SV_ranges')
     options[:ranges] = ranges
     {:inputs => options}
   end
-  task :expression_consequence => :text do
+
+  dep :germline_transcript_offsets
+  dep :somatic_transcript_offsets
+  dep :SV_partial_genes
+  dep :SV_full_genes
+  task :expression_consequence => :tsv do
     Step.wait_for_jobs dependencies
-    pop_job, transcript_offsets_job_germline, transcript_offsets_job, genes_partial_job, genes_full_job = dependencies
+    transcript_offsets_job_germline, transcript_offsets_job, genes_partial_job, genes_full_job = dependencies
+    pop_job = transcript_offsets_job.step(:population_genotypes)
 
     transcript_offsets_germline = transcript_offsets_job_germline.load
     transcript_offsets = transcript_offsets_job.load
 
     somatic_mutations = transcript_offsets.keys
+    germline_mutations = transcript_offsets_germline.keys
 
     genes_partial = genes_partial_job.load
     genes_full = genes_full_job.load
@@ -76,15 +88,32 @@ module HTSBenchmark
       end
     end
 
-    sout = Misc.open_pipe do |sin|
-      transcript_mutations.each do |clone, transcript, copy, offset, strand, change, mut|
-        sin.puts [transcript, copy, clone, mut, [offset, strand] * ":"] * "\t"
-      end
-      gene_svs.each do |clone, gene, copy, type|
-        sin.puts [gene, copy, clone, type] * "\t"
+    germline_mutations.each do |mut|
+      hap_mut = HTSBenchmark.haploid_mutation(mut)
+      copy, _sep, mut = hap_mut.partition("_")
+      chr, pos, change = mut.split(":")
+      mut.sub!(/^chr/,'')
+      (transcript_offsets_germline[mut] || []).each do |toff|
+        transcript, offset, strand = toff.split(":")
+        transcript_mutations << ['germline', transcript, copy, offset, strand, change, mut]
       end
     end
-    sout
+
+
+    dumper = TSV::Dumper.new :key_field => "Entity", :fields => ["Copy", "Clone", "Change", "Location"], :type => :list
+    dumper.init
+    t = Thread.new do 
+      transcript_mutations.each do |clone, transcript, copy, offset, strand, change, mut|
+        dumper.add transcript, [copy, clone, mut, [offset, strand] * ":"]
+      end
+      gene_svs.each do |clone, gene, copy, type|
+        dumper.add gene, [copy, clone, type, nil]
+      end
+      dumper.close
+    end
+
+    stream = dumper.stream
+    ConcurrentStream.setup stream, :threads => t
   end
 
 end

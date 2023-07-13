@@ -85,4 +85,13 @@ module HTSBenchmark
     simevo.join unless simevo.done?
     {:inputs => options.merge(:evolution => Open.read(simevo.path)), :jobname => jobname}
   end
+
+  dep :simulate_evolution, :compute => :produce
+  dep :genotype_germline_hg38
+  dep_task :simulate_population_expression, HTSBenchmark, :expression_consequence, :evolution => :placeholder, :germline_mutations => :genotype_germline_hg38 do |jobname,options,dependencies|
+    simevo = dependencies.flatten.first
+    simevo.produce
+    simevo.join unless simevo.done?
+    {:inputs => options.merge(:evolution => Open.read(simevo.path)), :jobname => jobname}
+  end
 end
