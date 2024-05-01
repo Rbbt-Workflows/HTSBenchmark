@@ -25,17 +25,18 @@ module HTSBenchmark
       type, chr, start, eend, target_chr, target_start, target_end = values
       target_chr = nil if target_chr.empty?
       target_end = nil if target_end.empty?
-      next if sizes[chr].nil?
-      next if sizes[chr] < eend.to_i
-      next if target_chr && sizes[target_chr] < target_start.to_i
-      next if target_chr && target_end && sizes[target_chr] < target_end.to_i
+      next if sizes.keys.any? && sizes[chr].nil?
+      next if sizes[chr] && sizes[chr] < eend.to_i
+      next if sizes.keys.any? && sizes[target_chr].nil?
+      next if target_chr && sizes[target_chr] && sizes[target_chr] < target_start.to_i
+      next if target_chr && sizes[target_chr] && target_end && sizes[target_chr] < target_end.to_i
 
       clean_svs << values
     end
 
     mutations = mutations.select do |mut|
       chr, pos, alt = mut.split(":")
-      pos.to_i <= sizes[chr]
+      sizes[chr].nil? || pos.to_i <= sizes[chr]
     end
 
     parents = parents.collect{|p| String === p && p =~ /^\d+$/ ?  p.to_i : p }

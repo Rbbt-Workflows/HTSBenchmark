@@ -72,6 +72,7 @@ module HTSBenchmark
   def self.calculate_sizes(positions, min = 100, padding = 1_000)
     min = nil if min == 0
     sizes = {}
+    return sizes if min.nil?
     positions = StringIO.new(positions) if String === positions && ! Path === positions
     TSV.traverse positions, :type => :array, :bar => true do |position|
       chr, _sep, position = position.partition(":")
@@ -85,8 +86,9 @@ module HTSBenchmark
 
       list.push(position)
 
+      list.sort!
+
       if min && list.length > min
-        list.sort!
         list.pop 
       end
 

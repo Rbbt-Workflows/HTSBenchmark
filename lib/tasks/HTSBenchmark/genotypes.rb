@@ -133,8 +133,10 @@ module HTSBenchmark
 
     max = size * mutations_per_MB / 1_000_000
 
+    Workflow.require_workflow "Study"
     Workflow.require_workflow "PCAWG"
-    mutations = Study.setup(study).genomic_mutations
+    study = Study.setup(study.dup)
+    mutations = study.genomic_mutations
     mutations = mutations.select{|mutation| mutation.split(":").first.sub('chr','') == chr}  if chr
     mutations = mutations.reject{|mutation| mutation.split(":").first.include? "_"}
 
@@ -157,7 +159,7 @@ module HTSBenchmark
   end
 
   input :somatic_source, :select, "Somatic source", "COSMIC", :select_options => %w(PCAWG COSMIC)
-  dep_task :genotype_somatic_hg38_pre_check, HTSBenchmark, :genotype_somatic_hg38_COSMIC do |jobname,options|
+  dep_task :genotype_somatic_hg38_pre_check, HTSBenchmark, :genotype_somatic_hg38_PCAWG do |jobname,options|
     case options[:somatic_source]
     when "COSMIC"
       {:inputs => options}
@@ -168,14 +170,12 @@ module HTSBenchmark
     end
   end
 
-  dep :genotype_germline_hg38
+  
   dep :genotype_somatic_hg38_pre_check
   dep Sequence, :reference, :positions => :genotype_somatic_hg38_pre_check, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false 
   task :genotype_somatic_hg38 => :array do 
-    germline = Set.new step(:genotype_germline_hg38).load
     TSV.traverse step(:reference), :into => :stream do |mutation, reference|
       next if mutation.split(":")[2].split(",").include? reference
-      next if germline.include? mutation
       mutation
     end
   end
@@ -222,6 +222,7 @@ module HTSBenchmark
 
     bps = {}
     types = {}
+    study = Study.setup(study.dup)
     Study.setup(study).donors.each do |donor|
       donor.SV.each do |sv|
         chr, pos, type, chr2, pos2 = sv.split(":")
@@ -346,4 +347,10 @@ module HTSBenchmark
     end
   end
 
+  input :mutations, :array, "List of genomic mutations"
+  task :haploid_mutations => :array do |mutations|
+    TSV.traverse mutations, :into => :stream do |mut|
+      HTSBenchmark.haploid_mutation(mut)
+    end
+  end
 end
