@@ -6,7 +6,6 @@ Misc.add_libdir if __FILE__ == $0
 Workflow.require_workflow "Sample"
 Workflow.require_workflow "Study"
 Workflow.require_workflow "HTS"
-Workflow.require_workflow "Genomics"
 Workflow.require_workflow "MutationSignatures"
 
 module HTSBenchmark
