@@ -5,12 +5,17 @@ module HTSBenchmark
 
   #{{{ GERMLINE
 
-  task :genotype_germline_hg19_all_chr => :array do 
+  input :haploid, :boolean, "Use haploid frequencies (half)", false
+  task :genotype_germline_hg19_all_chr => :array do |haploid|
     Workflow.require_workflow "Genomes1000"
     TSV.traverse Genomes1000.rsids, :fields => ["Genomic Mutation", "EUR_AF"], :type => :list, :into => :stream, :bar => self.progress_bar("Selecting germline mutations") do |rsid,values|
       mutation, af = values
-      next unless rand < af.to_f
-      mutation
+      af = haploid ? af.to_f / 2 : af.to_f
+      next unless rand < af
+      chr, pos, alt_l = mutation.split(":")
+      alts = alt_l.split(",")
+      alt = alts.sample(1).first
+      [chr, pos, alt] * ":"
     end
   end
 
@@ -45,6 +50,25 @@ module HTSBenchmark
       # breaks other tools downstream
       next if mutation.split(":")[2].split(",").include? reference
       mutation
+    end
+  end
+
+  dep :genotype_germline_hg38, jobname: "father", haploid: true, compute: :produce
+  dep :genotype_germline_hg38, jobname: "mother", haploid: true, compute: :produce
+  task :diploid_genotype_germline_hg38 => :array do
+    Open.open_pipe do |sin|
+      TSV.traverse dependencies.first, type: :array, bar: true do |mutation|
+        chr, pos, alt = mutation.split(":")
+        chr = "chr" + chr unless chr.start_with("chr")
+        chr = "copy-1_" + chr
+        sin.puts [chr, pos, alt] * ":"
+      end
+      TSV.traverse dependencies.last, type: :array, bar: true do |mutation|
+        chr, pos, alt = mutation.split(":")
+        chr = "chr" + chr unless chr.start_with?("chr")
+        chr = "copy-1_" + chr
+        sin.puts [chr, pos, alt] * ":"
+      end
     end
   end
 
@@ -134,6 +158,7 @@ module HTSBenchmark
     max = size * mutations_per_MB / 1_000_000
 
     Workflow.require_workflow "Study"
+    Workflow.require_workflow "Genomics"
     Workflow.require_workflow "PCAWG"
     study = Study.setup(study.dup)
     mutations = study.genomic_mutations
@@ -170,7 +195,7 @@ module HTSBenchmark
     end
   end
 
-  
+
   dep :genotype_somatic_hg38_pre_check
   dep Sequence, :reference, :positions => :genotype_somatic_hg38_pre_check, :organism => HG38_ORGANISM, :vcf => false, :full_reference_sequence => false 
   task :genotype_somatic_hg38 => :array do 
